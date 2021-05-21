@@ -2,3 +2,8 @@ discord
 asyncio
 ffmpeg
 selenium
+pip
+youtube_dl
+discord.py[voice] ~= 1.4.0
+colorlog
+PyNaCl
