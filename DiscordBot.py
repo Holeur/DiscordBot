@@ -7,7 +7,7 @@ import time
 import bestdllever
 
 try:
-    TOKEN = 'NzYwODYxNTcyMTQ2Mzk3MTk0.X3SNjg.ZZPT2mo9o5itFvkRpwNr18WGDzg'
+    TOKEN = ''
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix='!',intents=intents)
     names = []
