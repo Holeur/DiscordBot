@@ -5,9 +5,10 @@ from discord.voice_client import VoiceClient
 import asyncio
 import time
 import bestdllever
+import os
 
 try:
-    TOKEN = ''
+    TOKEN = os.getenv("BOT_TOKEN")
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix='!',intents=intents)
     names = []
