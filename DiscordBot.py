@@ -42,7 +42,7 @@ try:
             active_channel_id = channel.id
             print(time.strftime("%c",time.gmtime(time.time()))+" Connected to "+str(active_channel_id)) 
             vc = await channel.connect()
-            vc.play(discord.FFmpegPCMAudio(executable="bin/ffmpeg.exe",source="soundOnJoin.mp3"))
+            vc.play(discord.FFmpegPCMAudio(source="soundOnJoin.mp3"))
         except Exception as e:
             print(e)
             await ctx.voice_client.disconnect()
@@ -50,7 +50,7 @@ try:
             active_channel_id = channel.id
             print(time.strftime("%c",time.gmtime(time.time()))+" Connected to "+str(active_channel_id)) 
             vc = await channel.connect()
-            vc.play(discord.FFmpegPCMAudio(executable="bin/ffmpeg.exe",source="soundOnJoin.mp3"))
+            vc.play(discord.FFmpegPCMAudio(source="soundOnJoin.mp3"))
 
     @bot.command()
     async def leave(ctx):
@@ -180,7 +180,7 @@ try:
 
             if upd_target_member.guild.get_member(bot.user.id) in target_channel.members:
                 if vc and not vc.is_playing():
-                    vc.play(discord.FFmpegPCMAudio(executable="bin/ffmpeg.exe",source="soundOnMicroState.mp3"))
+                    vc.play(discord.FFmpegPCMAudio(source="soundOnMicroState.mp3"))
 
 
         elif main_target_member == upd_target_member and upd_target_member.voice.self_mute == True:
@@ -199,7 +199,7 @@ try:
 
             if upd_target_member.guild.get_member(bot.user.id) in target_channel.members:
                 if vc and not vc.is_playing():
-                    vc.play(discord.FFmpegPCMAudio(executable="bin/ffmpeg.exe",source="soundOnMicroState.mp3"))
+                    vc.play(discord.FFmpegPCMAudio(source="soundOnMicroState.mp3"))
 
     @bot.event
     async def on_command_error(ctx, error):
