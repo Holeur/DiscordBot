@@ -43,7 +43,8 @@ try:
             print(time.strftime("%c",time.gmtime(time.time()))+" Connected to "+str(active_channel_id)) 
             vc = await channel.connect()
             vc.play(discord.FFmpegPCMAudio(executable="heroku-buildpack-ffmpeg-latest/bin/ffmpeg.exe",source="soundOnJoin.mp3"))
-        except:
+        except Exception as e:
+            print(e)
             await ctx.voice_client.disconnect()
             channel = ctx.author.voice.channel
             active_channel_id = channel.id
