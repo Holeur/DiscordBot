@@ -6,6 +6,7 @@ import asyncio
 import time
 import bestdllever
 import os
+import random
 
 try:
     TOKEN = os.getenv("BOT_TOKEN")
@@ -109,10 +110,17 @@ try:
             await ctx.send(ctx.author.name+" не является администратором")
 
     @bot.command()
-    async def flip_channels(ctx):
-        channel = ctx.author.channel
+    async def flip_channels(ctx,number_tryes):
+        channel = ctx.author.voice.channel
+        list_channels = ctx.author.guild.voice_channels
         if channel != None:
-            print(channel)
+            list_boys = channel.members
+            for tr in range(0,int(number_tryes)): # Цикл перебросов повторяется поставленое кол-во раз
+                for boy in list_boys:
+                    max = len(list_channels)-1
+                    boy.move_to(list_channels[random.randint(0,max),"Устроен кринж"]) # Берется рандомное число от 0 до максимума массива списка каналов и по этому индексу отправляется пользователь по списку
+        else:
+            await ctx.send("Автор, на канал зайди")
         await ctx.send("Начинаю кринж")
 
     @bot.command()  
