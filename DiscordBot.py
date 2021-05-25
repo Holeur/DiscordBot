@@ -109,22 +109,24 @@ try:
         else:
             await ctx.send(ctx.author.name+" не является администратором")
 
-    #@bot.command()
-    #async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
-    #    channel = ctx.author.voice.channel
-    #    list_channels = ctx.author.guild.voice_channels
-    #    await ctx.send("Начинаю кринж")
-    #    if channel != None:
-    #        list_boys = channel.members
-    #        for tr in range(0,int(number_tryes)): # Цикл перебросов повторяется поставленое кол-во раз
-    #            for boy in list_boys:
-    #                max = len(list_channels)-1
-    #                target_channel = list_channels[random.randint(0,max)]
-    #                print(max,list_channels,target_channels)
-    #                boy.move_to(target_channel,"Устроен кринж") # Берется рандомное число от 0 до максимума массива списка каналов и по этому индексу отправляется пользователь по списку
-    #        await ctx.send("Кринж закончен")
-    #    else:
-    #        await ctx.send("Автор, на канал зайди")
+    @bot.command()
+    async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
+        try:
+            channel = ctx.author.voice.channel
+            list_boys = channel.members
+            list_channels = ctx.author.guild.voice_channels
+            print(time.strftime("%c",time.gmtime(time.time()))+" На серваке начат кринж с популяцией из "+str(len(list_boys))+" человек на канале")
+            await ctx.send("Начинаю кринж")
+            for tr in range(0,int(number_tryes)): # Цикл перебросов повторяется поставленое кол-во раз
+                for boy in list_boys:
+                    max = len(list_channels)-1
+                    target_channel = list_channels[random.randint(0,max)]
+                    print("Мистер "+str(boy.name)+" летит в "+str(target_channel.name))
+                    await boy.move_to(target_channel,reason="Устроен кринж") # Берется рандомное число от 0 до максимума массива списка каналов и по этому индексу отправляется пользователь по списку
+            await ctx.send("Кринж закончен")
+        except Exception as e:
+            print(e)
+            await ctx.send("Автор, на канал зайди")
 
     @bot.command()  
     async def clear_target(ctx): #
