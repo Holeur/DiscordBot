@@ -109,6 +109,17 @@ try:
         else:
             await ctx.send(ctx.author.name+" не является администратором")
 
+    def is_me(m):
+        try:
+            return m.author == bot.user or m.content[0] == "!" 
+        except:
+            return False
+
+    @bot.command()
+    async def clear_shit(ctx): # Очищение сообщений бота или команд
+        channel = ctx.channel
+        await channel.purge(check=is_me)
+
     @bot.command()
     async def smile_frase(ctx,font_smile,text_smile,frase): # Фукнция по сообщению смайликами
         mas_lines = []
