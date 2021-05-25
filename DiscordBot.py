@@ -108,6 +108,12 @@ try:
         else:
             await ctx.send(ctx.author.name+" не является администратором")
 
+    @bot.command()
+    async def flip_channels(ctx):
+        channel = ctx.author.channel
+        if channel != None:
+            print(channel)
+
     @bot.command()  
     async def clear_target(ctx):  
         global main_target_member
