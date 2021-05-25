@@ -110,6 +110,28 @@ try:
             await ctx.send(ctx.author.name+" не является администратором")
 
     @bot.command()
+    async def smile_frase(ctx,font_smile,text_smile,frase): # Фукнция по сообщению смайликами
+        mas_lines = []
+        mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile)
+        print("Выбрана фраза: "+str(frase))
+            
+        for elem in frase: # По каждой букве в фразе отрисовывается массив 
+            mas = printLetter(font_smile,text_smile,elem) # Функция отрисовывает и возвращает массив элементов относительно буквы
+            for line in mas:
+                mas_lines.append(line)
+            mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile) # Добовление пробела между буквами для видимости
+        mes = ""
+
+        for line in mas_lines: # По каждой линии в масиве линий создается сообщение
+            mes += line + "\n"
+            print(len(mes))
+            if len(mes) >= 200: # Если длина сообщения становится 200 символов, то сообщение отправляется чтобы пройти ограничение
+                print("Ограничение в 200 символов пройдено")
+                await ctx.send(mes)
+                mes = ""
+        await ctx.send(mes) # После создания сообщения оно отправляется от лица бота в канал контекста
+
+    @bot.command()
     async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
         try:
             channel = ctx.author.voice.channel

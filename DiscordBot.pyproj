@@ -11,6 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>DiscordBot</Name>
     <RootNamespace>DiscordBot</RootNamespace>
+    <SuppressEnvironmentCreationPrompt>True</SuppressEnvironmentCreationPrompt>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
