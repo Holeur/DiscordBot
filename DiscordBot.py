@@ -113,6 +113,7 @@ try:
         channel = ctx.author.channel
         if channel != None:
             print(channel)
+        await ctx.send("Начинаю кринж")
 
     @bot.command()  
     async def clear_target(ctx):  
