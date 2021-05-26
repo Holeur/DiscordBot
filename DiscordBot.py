@@ -7,7 +7,7 @@ import time
 import bestdllever
 import os
 import random
-import module1
+from module1 import *
 
 try:
     TOKEN = os.getenv("BOT_TOKEN")
