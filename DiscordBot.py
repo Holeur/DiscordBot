@@ -14,6 +14,7 @@ try:
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix='!',intents=intents)
     names = []
+    muted_names = []
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
