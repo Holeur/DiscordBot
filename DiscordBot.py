@@ -38,6 +38,7 @@ try:
 
     @bot.command()
     async def join(ctx): # Функция по входу на канал
+        '''Заставляет зайти бота на канал'''
         global vc
         try: # Если не получается просто присоединиться бот пытается выйти и зайти 
             channel = ctx.author.voice.channel # Выбирается обьект канала, на котором в данный момент находится запросивший
@@ -45,8 +46,7 @@ try:
             print(time.strftime("%c",time.gmtime(time.time()))+" Connected to "+str(active_channel_id)) 
             vc = await channel.connect()
             vc.play(discord.FFmpegPCMAudio(source="soundOnJoin.mp3"))
-        except Exception as e:
-            print(e)
+        except:
             await ctx.voice_client.disconnect()
             channel = ctx.author.voice.channel
             active_channel_id = channel.id
@@ -56,6 +56,7 @@ try:
 
     @bot.command()
     async def leave(ctx):
+        '''Заставляет выйти бота с канала'''
         if ctx.voice_client != None: # Условие наличие канала у контекста 
             print("Disconnected from channel")
             await ctx.voice_client.disconnect()
@@ -65,6 +66,7 @@ try:
 
     @bot.command()
     async def admilist(ctx):
+        '''Список админов'''
         mes = "Список админов: \n"
         for elem in names:
             mes += elem+", "
@@ -73,6 +75,7 @@ try:
 
     @bot.command()
     async def give_admin(ctx,name):
+        '''Команда для выдачи админки'''
         admin_name = ctx.guild.get_member(int(name[3:name.find(">")])).name
         if admin_name != "Kolbaska": 
             if admin_name not in names:
@@ -86,6 +89,7 @@ try:
 
     @bot.command()
     async def remove_admin(ctx,name):
+        '''Команда для снятия админки'''
         admin_name = ctx.guild.get_member(int(name[3:name.find(">")])).name
         if admin_name != "Kolbaska":
             if admin_name in names:
@@ -98,6 +102,7 @@ try:
 
     @bot.command()
     async def get_target(ctx, name):  
+        '''Команда, зкрепляющая пользователя в войс канале и заставляющая остальных повторять его положение микрофона'''
         global main_target_member
         if ctx.author.name in names: # Проверка админки
             main_target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
@@ -116,13 +121,72 @@ try:
         except:
             return False
 
+    @bot.command()  
+    async def clear_target(ctx):  
+        '''Снятие закрепления'''
+        global main_target_member
+        if ctx.author.name in names: # Проверка админки
+            if main_target_member != "":
+                await ctx.send(main_target_member.name+" откреплен")
+            else:
+                await ctx.send("Никто не закреплен")
+            main_target_member = ""
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
     @bot.command()
     async def clear_shit(ctx): # Очищение сообщений бота или команд
+        '''Очистка всех сообщений команд и бота'''
         channel = ctx.channel
         await channel.purge(check=is_me)
 
+    def updateFileMutes(massive): # Функция, переписывает файл по полученному списку
+        with open("names_mute.txt","w",encoding="utf-8") as f:
+            for elem in massive:
+                f.write(elem+"\n")
+
+    @bot.command()
+    async def stealth_mute(ctx,id): # Функция тихого мута пользователя в чате
+        '''Запрещает разговаривать пользователю в текстовом виде'''
+        if ctx.author.name in names: # Проверка админки
+            if ctx.guild.get_member(int(id[3:id.find(">")])).name != "Kolbaska":
+                target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
+                if target_member.name not in muted_names:
+                    muted_names.append(target_member.name)
+                else:
+                    await ctx.send(target_member.name+" уже помалкивает сидит")
+                print("muted_names updated: "+str(muted_names))
+                with open("names_mute.txt","w",encoding="utf-8") as f:
+                    f.write(target_member.name)
+                await ctx.send("Кто этот ваш "+str(target_member.name))
+            else:
+                await ctx.send("Что? Не расслышал?")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
+    @bot.command()
+    async def stealth_unmute(ctx,id): # Функция тихого анмута пользователя в чате
+        '''Снятие команды stealth_mute'''
+        if ctx.author.name in names: # Проверка админки
+            if ctx.guild.get_member(int(id[3:id.find(">")])).name != "Kolbaska":
+                target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
+
+                if target_member.name in muted_names:
+                    del muted_names[muted_names.index(target_member.name)]
+                    updateFileMutes(muted_names)
+                    print("muted_names updated: "+str(muted_names))
+                else:
+                     await ctx.send(target_member.name+" нету в списке клоунов")
+
+                await ctx.send(target_member.name+" вернулся в село натуралов")
+            else:
+                await ctx.send("Что? Не расслышал?")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
     @bot.command()
     async def smile_frase(ctx,font_smile,text_smile,frase): # Фукнция по сообщению смайликами
+        '''Фраза смайликами !smile_frase *смайлик фона* *Смайлик текста* "Текст в кавычках"'''
         mas_lines = []
         mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile)
         print("Выбрана фраза: "+str(frase))
@@ -145,6 +209,7 @@ try:
 
     @bot.command()
     async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
+        '''Рандомный переброс пользователей в канале вызвавшего'''
         try:
             channel = ctx.author.voice.channel
             list_boys = channel.members
@@ -162,17 +227,6 @@ try:
             print(e)
             await ctx.send("Автор, на канал зайди")
 
-    @bot.command()  
-    async def clear_target(ctx): #
-        global main_target_member
-        if ctx.author.name in names: # Проверка админки
-            if main_target_member != "":
-                await ctx.send(main_target_member.name+" откреплен")
-            else:
-                await ctx.send("Никто не закреплен")
-            main_target_member = ""
-        else:
-            await ctx.send(ctx.author.name+" не является администратором")
 
     @bot.command() # Отдельная команда для мута
     async def mute(ctx,id_name):
@@ -211,6 +265,13 @@ try:
         with open(fileName,"w",encoding='utf-8') as f:
             for name in names:
                 f.write(name+"\n")
+
+    @bot.event
+    async def on_message(mes):
+        await bot.process_commands(mes)
+        if mes.author.name in muted_names and mes.author.name != "Kolbaska": # Постоянная проверка новых сообщений на наличие автора в забаненом списке
+            await mes.delete()
+            print("Мистер "+str(mes.author.name)+" попытался высрать: "+str(mes.content))
 
     @bot.event # Ивент, проверяющий состояние микрофонов на канале
     async def on_voice_state_update(upd_target_member,last_member,new_member):
