@@ -1,0 +1,9 @@
+Points:
+  !dai_point - Дает один раз 100 поинтов 
+  !check_points @NAME - Показывает поинты участника
+  !points_leaders - Список лидеров по поинтам
+  
+  !give_points @NAME - ADM - Дает участнику поинты
+  !remove_points @NAME - ADM - Снимает с участника поинты
+  !set_points @NAME - ADM - Устанавливает участнику определенное кол-ов поинтов
+  

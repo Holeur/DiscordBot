@@ -1,0 +1,6 @@
+Admins:
+  !admilist - Список админов
+  
+  !give_admin @NAME - ADM - Выдать админа
+  !remove_admin @NAME - ADM - Снять админа
+

@@ -9,26 +9,35 @@ import os
 import youtube_dl
 import random
 from module1 import *
+import openpyxl
+
 
 try:
+    kolbaskas_id = 259670108266430464
     TOKEN = os.getenv("BOT_TOKEN")
     intents = discord.Intents.all()
-    bot = commands.Bot(command_prefix='!',intents=intents)
-    names = []
+    bot = commands.Bot(command_prefix='!',intents=intents, help_command=None)
+    admin_names = []
     muted_names = []
+    pointsMas = {}
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
-    kolbaskas_id = "259670108266430464"
+    
+    
+    def timelog():
+        return time.ctime(time.time())
 
     @bot.event
     async def on_ready(): # Ивент срабатывает при запуске бота
+        loadTablePoints()
+
         with open("names.txt","r",encoding="utf-8") as f:
             for line in f:
                 if "\n" in line:
-                    names.append(bestdllever.deleten(line))
+                    admin_names.append(int(bestdllever.deleten(line)))
                 else:
-                    names.append(line)
+                    admin_names.append(int(line))
 
         with open("names_mute.txt","r",encoding="utf-8") as f:
             for line in f:
@@ -37,35 +46,208 @@ try:
                 else:
                     muted_names.append(line)
 
-        print(names)
-        print(muted_names)
-        print('Logged in as')
+        print("ADMINS:"+str(admin_names))
+        print("MUTED_BOYS"+str(muted_names))
         print(bot.user.name)
         print(bot.user.id)
         print(bot.guilds)
         print('------')
 
+# 
+# ВЫВОД СПИСКА КОМАНД
+#
+
+    @bot.command()
+    async def help(ctx):
+        mes = ""
+        if "points" in ctx.message.content:
+            with open("helpMessages/helpPoints.txt","r",encoding="utf-8") as f:
+                for line in f:
+                    mes += line
+                await ctx.send("```"+mes+"```")
+        elif "admins" in ctx.message.content:
+            with open("helpMessages/helpadmins.txt","r",encoding="utf-8") as f:
+                for line in f:
+                    mes += line
+                await ctx.send("```"+mes+"```")
+        elif "voice" in ctx.message.content:
+            with open("helpMessages/helpvoice.txt","r",encoding="utf-8") as f:
+                for line in f:
+                    mes += line
+                await ctx.send("```"+mes+"```")
+        elif "textchat" in ctx.message.content:
+            with open("helpMessages/helptextchat.txt","r",encoding="utf-8") as f:
+                for line in f:
+                    mes += line
+                await ctx.send("```"+mes+"```")
+        #elif "other" in ctx.message.content:
+        #    with open("helpMessages/helpother.txt","r",encoding="utf-8") as f:
+        #        for line in f:
+        #            mes += line
+        #        await ctx.send("```"+mes+"```")
+        else:
+            with open("helpMessages/helpMain.txt","r",encoding="utf-8") as f:
+                for line in f:
+                    mes += line
+                await ctx.send("```"+mes+"```")
+
+#
+# СИСТЕМА ПОИНТОВ
+#
+    def loadTablePoints(): # Функция проверяет первый элемент в таблице, если есть то собирает строки пока не наткнется на пустую
+        wb = openpyxl.load_workbook('pointsBD.xlsx')
+        mainstr = wb.active
+        idpos = 1
+
+        if mainstr["A1"].value == None:
+            hasID = False
+        else:
+            hasID = True
+
+        while hasID:
+            pointsMas[int(mainstr["A"+str(idpos)].value)] = int(mainstr["B"+str(idpos)].value)
+            idpos += 1
+            if mainstr["A"+str(idpos)].value == None:
+                hasID = False
+            else:
+                hasID = True
+
+        print(pointsMas)
+        wb.save('pointsBD.xlsx')
+
+    def updateTablePoints(): # Функция обновляет ТАБЛИЦУ по СЛОВАРЮ. Не наоборот
+        wb = openpyxl.load_workbook('pointsBD.xlsx')
+        mainstr = wb.active
+        id_row = 1
+        for id in pointsMas:
+            mainstr["A"+str(id_row)] = str(id)
+            mainstr["B"+str(id_row)] = str(pointsMas[id])
+            id_row += 1
+        wb.save('pointsBD.xlsx')
+
+    def checkInPointsMas(id): # id должен быть STR
+        if id not in pointsMas:
+            pointsMas[id] = 0
+
+    @bot.command()
+    async def dai_point(ctx):
+        if ctx.author.id not in pointsMas:
+            pointsMas[ctx.author.id] = 500
+            updateTablePoints()
+            await ctx.send("Получите распишитесь")
+        else:
+            await ctx.send("Поинты уже получены")
+
+    @bot.command()
+    async def points_leaders(ctx):
+        mainmes = "```"
+        mainmes += "Список лидеров:\n"
+        row = 1
+        fakemas = pointsMas
+        fakemas = dict(sorted(fakemas.items(), key=lambda x: x[1], reverse =True)) # Сортировка 
+        for id in fakemas:
+            mainmes += str(row)+") "+ctx.guild.get_member(id).name+" "+str(fakemas[id])+"\n"
+            row += 1
+        mainmes += "```"
+        await ctx.send(mainmes)
+
+    @bot.command()
+    async def give_points(ctx,name,point):
+        if ctx.author.id in admin_names:
+            target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+            checkInPointsMas(target_member.id)
+            points = int(point)
+
+            pointsMas[target_member.id] = pointsMas[target_member.id] + points
+            updateTablePoints()
+
+            print(timelog()+" Выдача "+target_member.name+" "+str(points)+" очков")
+            print(pointsMas)
+            await ctx.send("Выдача "+target_member.name+" "+str(points)+" очков")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
+    @bot.command()
+    async def remove_points(ctx,name,point):
+        if ctx.author.id in admin_names:
+            target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+            checkInPointsMas(target_member.id)
+            points = int(point)
+
+            pointsMas[target_member.id] = pointsMas[target_member.id] - points
+            updateTablePoints()
+
+            print(timelog()+" Снятие у "+target_member.name+" "+str(points)+" очков")
+            print(pointsMas)
+            await ctx.send("Снятие у "+target_member.name+" "+str(points)+" очков")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
+    @bot.command()
+    async def set_points(ctx,name,point):
+        if ctx.author.id in admin_names:
+            target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+            checkInPointsMas(target_member.id)
+            points = int(point)
+
+            pointsMas[target_member.id] = points
+            updateTablePoints()
+
+            print(timelog()+" Теперь у "+target_member.name+" "+str(points)+" очков")
+            print(pointsMas)
+            await ctx.send("Теперь у "+target_member.name+" "+str(points)+" очков")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
+    @bot.command()
+    async def check_points(ctx,name):
+        target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+        if target_member.id in pointsMas:
+            await ctx.send("У "+str(target_member.name)+" "+str(pointsMas[target_member.id])+" очков")
+        else:
+            await ctx.send("У "+str(target_member.name)+" нету очков")
+
+
+    def spendPoints(ctx,amount):
+        if ctx.author.id in pointsMas:
+            if pointsMas[ctx.author.id] >= amount:
+                pointsMas[ctx.author.id] -= amount
+                updateTablePoints()
+                print(ctx.author.name+" потратил "+str(amount)+" поинтов")
+                return True
+            else:
+                print(ctx.author.name+" НЕ потратил "+str(amount)+" поинтов")
+                return False
+        else:
+            print(ctx.author.name+" НЕ потратил "+str(amount)+" поинтов")
+            return False
+
+
+
+#
+# ВЗАИМОДЕЙСТВИЕ БОТА С ВОЙСОМ
+#
+
     @bot.command()
     async def join(ctx): # Функция по входу на канал
-        '''Заставляет зайти бота на канал'''
         global vc
         try: # Если не получается просто присоединиться бот пытается выйти и зайти 
             channel = ctx.author.voice.channel # Выбирается обьект канала, на котором в данный момент находится запросивший
             active_channel_id = channel.id
-            print(time.strftime("%c",time.gmtime(time.time()))+" Connected to "+str(active_channel_id)) 
+            print("Connected to "+str(active_channel_id)) 
             vc = await channel.connect()
             vc.play(discord.FFmpegPCMAudio(source="soundOnJoin.mp3"))
-        except:
+        except Exception as e:
+            print(e)
             await ctx.voice_client.disconnect()
             channel = ctx.author.voice.channel
             active_channel_id = channel.id
-            print(time.strftime("%c",time.gmtime(time.time()))+" Connected to "+str(active_channel_id)) 
+            print("Connected to "+str(active_channel_id)) 
             vc = await channel.connect()
             vc.play(discord.FFmpegPCMAudio(source="soundOnJoin.mp3"))
 
     @bot.command()
     async def leave(ctx):
-        '''Заставляет выйти бота с канала'''
         if ctx.voice_client != None: # Условие наличие канала у контекста 
             print("Disconnected from channel")
             await ctx.voice_client.disconnect()
@@ -73,56 +255,75 @@ try:
         else:
             await ctx.send("Бот не находится в канале")
 
+#
+# АДМИНКА
+#
+
     @bot.command()
     async def admilist(ctx):
-        '''Список админов'''
         mes = "Список админов: \n"
-        for elem in names:
-            mes += elem+", "
+        for elem in admin_names:
+            mes += ctx.guild.get_member(elem).name+", "
         mes = mes[:len(mes)-2]
-        await ctx.send(mes)
+        await ctx.send("```"+mes+"```")
 
     @bot.command()
     async def give_admin(ctx,name):
-        '''Команда для выдачи админки'''
-        admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
-        if admin_member.id != kolbaskas_id: 
-            if admin_member.name not in names:
-                names.append(admin_member.name)
-                await ctx.send(admin_member.name+" был добавлен в список админов")
+        if ctx.author.id in admin_names:
+            admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+            if admin_member.id != kolbaskas_id: 
+                if admin_member.id not in admin_names:
+                    admin_names.append(admin_member.id)
+                    await ctx.send(admin_member.name+" был добавлен в список админов")
+                else:
+                    await ctx.send(admin_member.name+" уже в списке админов")
+                updateFile("names.txt")
             else:
-                await ctx.send(admin_member.name+" уже в списке админов")
-            updateFile("names.txt")
+                await ctx.send("Божество не нуждается в ваших подачках")
         else:
-            await ctx.send("Божество не нуждается в ваших подачках")
+            await ctx.send(ctx.author.name+" не является администратором")
 
     @bot.command()
     async def remove_admin(ctx,name):
-        '''Команда для снятия админки'''
-        admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
-        if admin_member.id != kolbaskas_id:
-            if admin_member.name in names:
-                names.remove(admin_member.name)
-                await ctx.send(admin_name+" был убран из списка админов")
+        if ctx.author.id in admin_names:
+            admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+            if admin_member.id != kolbaskas_id:
+                if admin_member.id in admin_names:
+                    admin_names.remove(admin_member.id)
+                    await ctx.send(admin_member.name+" был убран из списка админов")
+                else:
+                    await ctx.send(admin_member.name+" нету в списке админов")
             else:
-                await ctx.send(admin_name+" нету в списке админов")
+                await ctx.send("Как вы посмели отобрать силу у бога?")
         else:
-            await ctx.send("Как вы посмели отобрать силу у бога?")
+            await ctx.send(ctx.author.name+" не является администратором")
+
+#
+# BOTSUS
+#
 
     @bot.command()
     async def get_target(ctx, name):  
-        '''Команда, зкрепляющая пользователя в войс канале и заставляющая остальных повторять его положение микрофона'''
         global main_target_member
-        if ctx.author.name in names: # Проверка админки
+        price = 100
+        descr = "определение цели общего мута"
+
+        if pointsMas[ctx.author.id] >= price:
             main_target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
             print(name)
+
             if main_target_member != None:
                 print(main_target_member.id)
                 await ctx.send(main_target_member.name+" закреплен")
             else:
                 await ctx.send(name+" не найден")
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send(ctx.author.name+" не является администратором")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+
+            
 
     def is_me(m):
         try:
@@ -132,33 +333,52 @@ try:
 
     @bot.command()  
     async def clear_target(ctx):  
-        '''Снятие закрепления'''
         global main_target_member
-        if ctx.author.name in names: # Проверка админки
+        price = 10
+        descr = "снятие цели общего мута"
+
+        if pointsMas[ctx.author.id] >= price:
             if main_target_member != "":
                 await ctx.send(main_target_member.name+" откреплен")
             else:
                 await ctx.send("Никто не закреплен")
             main_target_member = ""
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send(ctx.author.name+" не является администратором")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+
+#
+# МЕЛКИЕ ФИЧИ
+#
 
     @bot.command()
     async def clear_shit(ctx): # Очищение сообщений бота или команд
-        '''Очистка всех сообщений команд и бота'''
-        channel = ctx.channel
-        await channel.purge(check=is_me)
+        price = 1
+        descr = "очистку чата"
+
+        if pointsMas[ctx.author.id] >= price:
+            channel = ctx.channel
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+            await channel.purge(check=is_me)
+
+            spendPoints(ctx,price)
+            
+        else:
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
     def updateFileMutes(massive): # Функция, переписывает файл по полученному списку
         with open("names_mute.txt","w",encoding="utf-8") as f:
             for elem in massive:
                 f.write(elem+"\n")
 
-
     @bot.command()
     async def stealth_mute(ctx,id): # Функция тихого мута пользователя в чате
-        '''Запрещает разговаривать пользователю в текстовом виде'''
-        if ctx.author.name in names: # Проверка админки
+        price = 500
+        descr = "мут человека в чате"
+
+        if pointsMas[ctx.author.id] >= price:
             target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
             if target_member.id != kolbaskas_id:
                 if target_member.name not in muted_names:
@@ -171,13 +391,18 @@ try:
                 await ctx.send("Кто этот ваш "+str(target_member.name))
             else:
                 await ctx.send("Что? Не расслышал")
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send(ctx.author.name+" не является администратором")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
     @bot.command()
     async def stealth_unmute(ctx,id): # Функция тихого анмута пользователя в чате
-        '''Снятие команды stealth_mute'''
-        if ctx.author.name in names: # Проверка админки
+        price = 50
+        descr = "снятие мута чата"
+
+        if pointsMas[ctx.author.id] >= price:
             target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
             if target_member.id != kolbaskas_id:
                 if target_member.name in muted_names:
@@ -185,46 +410,59 @@ try:
                     updateFileMutes(muted_names)
                     print("muted_names updated: "+str(muted_names))
                 else:
-                     await ctx.send(target_member.name+" нету в списке клоунов")
+                    await ctx.send(target_member.name+" нету в списке клоунов")
 
                 await ctx.send(target_member.name+" вернулся в село натуралов")
             else:
                 await ctx.send("Что? Не расслышал")
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send(ctx.author.name+" не является администратором")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
     @bot.command()
     async def smile_frase(ctx,font_smile,text_smile,frase): # Фукнция по сообщению смайликами
-        '''Фраза смайликами !smile_frase *смайлик фона* *Смайлик текста* "Текст в кавычках"'''
-        mas_lines = []
-        mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile)
-        print("Выбрана фраза: "+str(frase))
-            
-        for elem in frase: # По каждой букве в фразе отрисовывается массив 
-            mas = printLetter(font_smile,text_smile,elem) # Функция отрисовывает и возвращает массив элементов относительно буквы
-            for line in mas:
-                mas_lines.append(line)
-            mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile) # Добовление пробела между буквами для видимости
-        mes = ""
+        price = 50
+        descr = "создание фразы из смайликов"
 
-        for line in mas_lines: # По каждой линии в масиве линий создается сообщение
-            mes += line + "\n"
-            print(len(mes))
-            if len(mes) >= 200: # Если длина сообщения становится 200 символов, то сообщение отправляется чтобы пройти ограничение
-                print("Ограничение в 200 символов пройдено")
-                await ctx.send(mes)
-                mes = ""
-        await ctx.send(mes) # После создания сообщения оно отправляется от лица бота в канал контекста
+        if pointsMas[ctx.author.id] >= price:
+            mas_lines = []
+            mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile)
+            print("Выбрана фраза: "+str(frase))
+            
+            for elem in frase: # По каждой букве в фразе отрисовывается массив 
+                mas = printLetter(font_smile,text_smile,elem) # Функция отрисовывает и возвращает массив элементов относительно буквы
+                for line in mas:
+                    mas_lines.append(line)
+                mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile) # Добовление пробела между буквами для видимости
+            mes = ""
+
+            for line in mas_lines: # По каждой линии в масиве линий создается сообщение
+                mes += line + "\n"
+                print(len(mes))
+                if len(mes) >= 200: # Если длина сообщения становится 200 символов, то сообщение отправляется чтобы пройти ограничение
+                    print("Ограничение в 200 символов пройдено")
+                    await ctx.send(mes)
+                    mes = ""
+            await ctx.send(mes) # После создания сообщения оно отправляется от лица бота в канал контекста
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+        else:
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
     @bot.command()
     async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
-        '''Рандомный переброс пользователей в канале вызвавшего'''
-        if ctx.author.name in names:
+        price = 300
+        descr = "рандомный переброс людей в канале"
+
+        if pointsMas[ctx.author.id] >= price:
             try:
                 channel = ctx.author.voice.channel
                 list_boys = channel.members
                 list_channels = ctx.author.guild.voice_channels
-                print(time.strftime("%c",time.gmtime(time.time()))+" На серваке начат кринж с популяцией из "+str(len(list_boys))+" человек на канале")
+                print("На серваке начат кринж с популяцией из "+str(len(list_boys))+" человек на канале")
                 await ctx.send("Начинаю кринж")
                 for tr in range(0,int(number_tryes)): # Цикл перебросов повторяется поставленое кол-во раз
                     for boy in list_boys:
@@ -233,18 +471,24 @@ try:
                         print("Мистер "+str(boy.name)+" летит в "+str(target_channel.name))
                         await boy.move_to(target_channel,reason="Устроен кринж") # Берется рандомное число от 0 до максимума массива списка каналов и по этому индексу отправляется пользователь по списку
                 await ctx.send("Кринж закончен")
+
+                spendPoints(ctx,price)
+                await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
             except Exception as e:
                 print(e)
                 await ctx.send("Автор, на канал зайди")
         else:
-            await ctx.send(ctx.author.name+" не является администратором")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
 
     @bot.command() # Отдельная команда для мута
     async def mute(ctx,id_name):
         name = ctx.guild.get_member(int(id_name[3:id_name.find(">")])).name
-        if ctx.author.name in names:
-            print(time.strftime("%c",time.gmtime(time.time()))+" Member name: "+str(name))
+        price = 100
+        descr = "мут человека на сервере"
+
+        if pointsMas[ctx.author.id] >= price:
+            print("Member name: "+str(name))
             print("Member id: "+str(ctx.guild))
             print("Server id: "+str(ctx.message.guild.id))
             member = ctx.guild.get_member_named(name)
@@ -253,14 +497,20 @@ try:
                 return
             else:
                 await member.edit(mute = True)
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            ctx.send(str(ctx.author.name)+" не администратор")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
     @bot.command() # Отдельная команда анмута
     async def unmute(ctx,id_name):
         name = ctx.guild.get_member(int(id_name[3:id_name.find(">")])).name
-        if ctx.author.name in names:
-            print(time.strftime("%c",time.gmtime(time.time()))+" Member name: "+str(name))
+        price = 10
+        descr = "снятие мута человека на сервере"
+
+        if pointsMas[ctx.author.id] >= price:
+            print("Member name: "+str(name))
             print("Member id: "+str(ctx.guild))
             print("Server id: "+str(ctx.message.guild.id))
             member = ctx.guild.get_member_named(name)
@@ -269,18 +519,26 @@ try:
                 return
             else:
                 await member.edit(mute = False)
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            ctx.send(str(ctx.author.name)+" не администратор")
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
     def updateFile(fileName): # Создание файла с именами админов
-        global names
         with open(fileName,"w",encoding='utf-8') as f:
-            for name in names:
-                f.write(name+"\n")
+            for id in admin_names:
+                f.write(str(id)+"\n")
+
+#
+# ИВЕНТЫ
+#
 
     @bot.event
     async def on_message(mes):
         await bot.process_commands(mes)
+        if mes.content[0] == "!":
+            print(time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id))
         if mes.author.name in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
             await mes.delete()
             print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
@@ -288,11 +546,11 @@ try:
     @bot.event # Ивент, проверяющий состояние микрофонов на канале
     async def on_voice_state_update(upd_target_member,last_member,new_member):
         global main_target_member,vc
-        print(time.ctime(time.time())+' У '+str(upd_target_member.name)+" изменился микрофон")
+        print(' У '+str(upd_target_member.name)+" изменился микрофон")
 
         # print(list)
         if main_target_member == upd_target_member and upd_target_member.voice.self_mute == False:
-            print(time.strftime("%c",time.gmtime(time.time()))+" ВЫБРАННАЯ ЦЕЛЬ ВКЛЮЧИЛА МИКРОФОН")
+            print("ВЫБРАННАЯ ЦЕЛЬ ВКЛЮЧИЛА МИКРОФОН")
             target_channel = new_member.channel # Выбирается обьект канала
             list = target_channel.members # Список пользователей на канале
 
@@ -302,7 +560,7 @@ try:
                     list.remove(upd_target_member.guild.get_member(bot.user.id))
 
             for memb in list:
-                print(time.strftime("%c",time.gmtime(time.time()))+" Антимут "+str(memb.name))
+                print("Антимут "+str(memb.name))
                 await memb.edit(mute = False)
 
             if upd_target_member.guild.get_member(bot.user.id) in target_channel.members:
@@ -311,7 +569,7 @@ try:
 
 
         elif main_target_member == upd_target_member and upd_target_member.voice.self_mute == True:
-            print(time.strftime("%c",time.gmtime(time.time()))+" ВЫБРАННАЯ ЦЕЛЬ ВЫКЛЮЧИЛА МИКРОФОН")
+            print("ВЫБРАННАЯ ЦЕЛЬ ВЫКЛЮЧИЛА МИКРОФОН")
             target_channel = new_member.channel
             list = target_channel.members
 
@@ -321,7 +579,7 @@ try:
                     list.remove(upd_target_member.guild.get_member(bot.user.id))
 
             for memb in list:
-                print(time.strftime("%c",time.gmtime(time.time()))+" Мут "+str(memb.name))
+                print("Мут "+str(memb.name))
                 await memb.edit(mute = True)
 
             if upd_target_member.guild.get_member(bot.user.id) in target_channel.members:
