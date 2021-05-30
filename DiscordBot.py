@@ -32,7 +32,7 @@ try:
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    time.sleep(1)
+    
     browser = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
     
     def timelog():
@@ -74,6 +74,7 @@ try:
         browser.find_element_by_xpath("//*[@id='textarea_i']").send_keys(text)
         browser.find_element_by_xpath("//*[@id='run']").click()
         result = browser.find_element_by_xpath("//*[@id='out']").text
+        time.sleep(1)
         await ctx.send(result)
 
 # 
