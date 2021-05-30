@@ -19,7 +19,7 @@ try:
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
-    kolbasas_id = "259670108266430464"
+    kolbaskas_id = "259670108266430464"
 
     @bot.event
     async def on_ready(): # Ивент срабатывает при запуске бота
@@ -86,7 +86,7 @@ try:
     async def give_admin(ctx,name):
         '''Команда для выдачи админки'''
         admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
-        if admin_member.id != kolbasas_id: 
+        if admin_member.id != kolbaskas_id: 
             if admin_member.name not in names:
                 names.append(admin_member.name)
                 await ctx.send(admin_member.name+" был добавлен в список админов")
@@ -100,7 +100,7 @@ try:
     async def remove_admin(ctx,name):
         '''Команда для снятия админки'''
         admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
-        if admin_member.id != kolbasas_id:
+        if admin_member.id != kolbaskas_id:
             if admin_member.name in names:
                 names.remove(admin_member.name)
                 await ctx.send(admin_name+" был убран из списка админов")
@@ -160,7 +160,7 @@ try:
         '''Запрещает разговаривать пользователю в текстовом виде'''
         if ctx.author.name in names: # Проверка админки
             target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
-            if target_member.id != kolbasas_id:
+            if target_member.id != kolbaskas_id:
                 if target_member.name not in muted_names:
                     muted_names.append(target_member.name)
                 else:
