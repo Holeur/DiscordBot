@@ -6,6 +6,7 @@ import asyncio
 import time
 import bestdllever
 import os
+import youtube_dl
 import random
 from module1 import *
 
@@ -18,6 +19,7 @@ try:
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
+    kolbasas_id = "259670108266430464"
 
     @bot.event
     async def on_ready(): # Ивент срабатывает при запуске бота
@@ -28,13 +30,19 @@ try:
                 else:
                     names.append(line)
 
-        if "Kolbaska" not in names:
-            names.append("Kolbaska")
+        with open("names_mute.txt","r",encoding="utf-8") as f:
+            for line in f:
+                if "\n" in line:
+                    muted_names.append(bestdllever.deleten(line))
+                else:
+                    muted_names.append(line)
 
         print(names)
+        print(muted_names)
         print('Logged in as')
         print(bot.user.name)
         print(bot.user.id)
+        print(bot.guilds)
         print('------')
 
     @bot.command()
@@ -77,13 +85,13 @@ try:
     @bot.command()
     async def give_admin(ctx,name):
         '''Команда для выдачи админки'''
-        admin_name = ctx.guild.get_member(int(name[3:name.find(">")])).name
-        if admin_name != "Kolbaska": 
-            if admin_name not in names:
-                names.append(admin_name)
-                await ctx.send(admin_name+" был добавлен в список админов")
+        admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+        if admin_member.id != kolbasas_id: 
+            if admin_member.name not in names:
+                names.append(admin_member.name)
+                await ctx.send(admin_member.name+" был добавлен в список админов")
             else:
-                await ctx.send(admin_name+" уже в списке админов")
+                await ctx.send(admin_member.name+" уже в списке админов")
             updateFile("names.txt")
         else:
             await ctx.send("Божество не нуждается в ваших подачках")
@@ -91,10 +99,10 @@ try:
     @bot.command()
     async def remove_admin(ctx,name):
         '''Команда для снятия админки'''
-        admin_name = ctx.guild.get_member(int(name[3:name.find(">")])).name
-        if admin_name != "Kolbaska":
-            if admin_name in names:
-                names.remove(admin_name)
+        admin_member = ctx.guild.get_member(int(name[3:name.find(">")]))
+        if admin_member.id != kolbasas_id:
+            if admin_member.name in names:
+                names.remove(admin_member.name)
                 await ctx.send(admin_name+" был убран из списка админов")
             else:
                 await ctx.send(admin_name+" нету в списке админов")
@@ -146,12 +154,13 @@ try:
             for elem in massive:
                 f.write(elem+"\n")
 
+
     @bot.command()
     async def stealth_mute(ctx,id): # Функция тихого мута пользователя в чате
         '''Запрещает разговаривать пользователю в текстовом виде'''
         if ctx.author.name in names: # Проверка админки
-            if ctx.guild.get_member(int(id[3:id.find(">")])).name != "Kolbaska":
-                target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
+            target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
+            if target_member.id != kolbasas_id:
                 if target_member.name not in muted_names:
                     muted_names.append(target_member.name)
                 else:
@@ -161,7 +170,7 @@ try:
                     f.write(target_member.name)
                 await ctx.send("Кто этот ваш "+str(target_member.name))
             else:
-                await ctx.send("Что? Не расслышал?")
+                await ctx.send("Что? Не расслышал")
         else:
             await ctx.send(ctx.author.name+" не является администратором")
 
@@ -169,9 +178,8 @@ try:
     async def stealth_unmute(ctx,id): # Функция тихого анмута пользователя в чате
         '''Снятие команды stealth_mute'''
         if ctx.author.name in names: # Проверка админки
-            if ctx.guild.get_member(int(id[3:id.find(">")])).name != "Kolbaska":
-                target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
-
+            target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
+            if target_member.id != kolbaskas_id:
                 if target_member.name in muted_names:
                     del muted_names[muted_names.index(target_member.name)]
                     updateFileMutes(muted_names)
@@ -181,7 +189,7 @@ try:
 
                 await ctx.send(target_member.name+" вернулся в село натуралов")
             else:
-                await ctx.send("Что? Не расслышал?")
+                await ctx.send("Что? Не расслышал")
         else:
             await ctx.send(ctx.author.name+" не является администратором")
 
@@ -211,22 +219,25 @@ try:
     @bot.command()
     async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
         '''Рандомный переброс пользователей в канале вызвавшего'''
-        try:
-            channel = ctx.author.voice.channel
-            list_boys = channel.members
-            list_channels = ctx.author.guild.voice_channels
-            print(time.strftime("%c",time.gmtime(time.time()))+" На серваке начат кринж с популяцией из "+str(len(list_boys))+" человек на канале")
-            await ctx.send("Начинаю кринж")
-            for tr in range(0,int(number_tryes)): # Цикл перебросов повторяется поставленое кол-во раз
-                for boy in list_boys:
-                    max = len(list_channels)-1
-                    target_channel = list_channels[random.randint(0,max)]
-                    print("Мистер "+str(boy.name)+" летит в "+str(target_channel.name))
-                    await boy.move_to(target_channel,reason="Устроен кринж") # Берется рандомное число от 0 до максимума массива списка каналов и по этому индексу отправляется пользователь по списку
-            await ctx.send("Кринж закончен")
-        except Exception as e:
-            print(e)
-            await ctx.send("Автор, на канал зайди")
+        if ctx.author.name in names:
+            try:
+                channel = ctx.author.voice.channel
+                list_boys = channel.members
+                list_channels = ctx.author.guild.voice_channels
+                print(time.strftime("%c",time.gmtime(time.time()))+" На серваке начат кринж с популяцией из "+str(len(list_boys))+" человек на канале")
+                await ctx.send("Начинаю кринж")
+                for tr in range(0,int(number_tryes)): # Цикл перебросов повторяется поставленое кол-во раз
+                    for boy in list_boys:
+                        max = len(list_channels)-1
+                        target_channel = list_channels[random.randint(0,max)]
+                        print("Мистер "+str(boy.name)+" летит в "+str(target_channel.name))
+                        await boy.move_to(target_channel,reason="Устроен кринж") # Берется рандомное число от 0 до максимума массива списка каналов и по этому индексу отправляется пользователь по списку
+                await ctx.send("Кринж закончен")
+            except Exception as e:
+                print(e)
+                await ctx.send("Автор, на канал зайди")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
 
 
     @bot.command() # Отдельная команда для мута
@@ -270,14 +281,14 @@ try:
     @bot.event
     async def on_message(mes):
         await bot.process_commands(mes)
-        if mes.author.name in muted_names and mes.author.name != "Kolbaska": # Постоянная проверка новых сообщений на наличие автора в забаненом списке
+        if mes.author.name in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
             await mes.delete()
-            print("Мистер "+str(mes.author.name)+" попытался высрать: "+str(mes.content))
+            print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
 
     @bot.event # Ивент, проверяющий состояние микрофонов на канале
     async def on_voice_state_update(upd_target_member,last_member,new_member):
         global main_target_member,vc
-        print(time.strftime("%c",time.gmtime(time.time()))+' У '+str(upd_target_member.name)+" изменился микрофон")
+        print(time.ctime(time.time())+' У '+str(upd_target_member.name)+" изменился микрофон")
 
         # print(list)
         if main_target_member == upd_target_member and upd_target_member.voice.self_mute == False:
