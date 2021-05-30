@@ -8,6 +8,8 @@ import bestdllever
 import os
 import youtube_dl
 import random
+import selenium
+from selenium import webdriver
 from module1 import *
 import openpyxl
 
@@ -24,6 +26,7 @@ try:
     active_channel_id = ""
     main_guild = ""
     
+    browser = webdriver.Firefox()
     
     def timelog():
         return time.ctime(time.time())
@@ -52,6 +55,19 @@ try:
         print(bot.user.id)
         print(bot.guilds)
         print('------')
+
+
+#
+# НАЙТИ ТЕКСТ С СИНОНИМАМИ
+#
+
+    @bot.command()
+    async def get_sinonim(ctx,text):
+        browser.get("https://raskruty.ru/tools/synonymizer/")
+        browser.find_element_by_xpath("//*[@id='textarea_i']").send_keys(text)
+        browser.find_element_by_xpath("//*[@id='run']").click()
+        result = browser.find_element_by_xpath("//*[@id='out']").text
+        await ctx.send(result)
 
 # 
 # ВЫВОД СПИСКА КОМАНД
