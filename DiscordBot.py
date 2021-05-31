@@ -642,8 +642,8 @@ try:
 
         if len(mes.attachments) == 0 and mes.content[0] == "!":
             log = time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id)
-            with open("logs.txt","w",encoding="utf-8") as f:
-                f.write(log)
+            with open("logs.txt","a",encoding="utf-8") as f:
+                f.write(log+"\n")
                 print(log)
 
         if mes.author.name in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
