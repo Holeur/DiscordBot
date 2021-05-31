@@ -63,12 +63,21 @@ try:
 
     @bot.command()
     async def get_sinonim(ctx,text):
-        browser.get("https://raskruty.ru/tools/synonymizer/")
-        browser.find_element_by_xpath("//*[@id='textarea_i']").send_keys(text)
-        browser.find_element_by_xpath("//*[@id='run']").click()
-        time.sleep(1)
-        result = browser.find_element_by_xpath("//*[@id='out']").text
-        await ctx.send(result)
+        price = 10
+        descr = "определение цели общего мута"
+
+        if pointsMas[ctx.author.id] >= price:
+            browser.get("https://raskruty.ru/tools/synonymizer/")
+            browser.find_element_by_xpath("//*[@id='textarea_i']").send_keys(text)
+            browser.find_element_by_xpath("//*[@id='run']").click()
+            time.sleep(1)
+            result = browser.find_element_by_xpath("//*[@id='out']").text
+            await ctx.send(result)
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+        else:
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
 # 
 # ВЫВОД СПИСКА КОМАНД
