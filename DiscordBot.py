@@ -77,7 +77,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
 # 
 # ВЫВОД СПИСКА КОМАНД
@@ -172,7 +172,7 @@ try:
         fakemas = pointsMas
         fakemas = dict(sorted(fakemas.items(), key=lambda x: x[1], reverse =True)) # Сортировка 
         for id in fakemas:
-            mainmes += str(row)+") "+ctx.guild.get_member(id).name+" "+str(fakemas[id])+"\n"
+            mainmes += str(row)+") "+ctx.guild.get_member(id).name+" "+str(round(fakemas[id],2))+"\n"
             row += 1
         mainmes += "```"
         await ctx.send(mainmes)
@@ -347,7 +347,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     @bot.command()  
     async def clear_target(ctx):  
@@ -365,7 +365,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
 #
 # МЕЛКИЕ ФИЧИ
@@ -390,7 +390,7 @@ try:
             spendPoints(ctx,price)
             
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     def updateFileMutes(massive): # Функция, переписывает файл по полученному списку
         with open("names_mute.txt","w",encoding="utf-8") as f:
@@ -419,7 +419,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     @bot.command()
     async def stealth_unmute(ctx,id): # Функция тихого анмута пользователя в чате
@@ -443,7 +443,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     @bot.command()
     async def smile_frase(ctx,font_smile,text_smile,frase): # Фукнция по сообщению смайликами
@@ -474,7 +474,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     @bot.command()
     async def flip_channels(ctx,number_tryes): # Функция по перебрасыванию людей в канале
@@ -502,7 +502,7 @@ try:
                 print(e)
                 await ctx.send("Автор, на канал зайди")
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
 
     @bot.command() # Отдельная команда для мута
@@ -525,7 +525,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     @bot.command() # Отдельная команда анмута
     async def unmute(ctx,id_name):
@@ -547,7 +547,7 @@ try:
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
         else:
-            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     def updateFile(fileName): # Создание файла с именами админов
         with open(fileName,"w",encoding='utf-8') as f:
