@@ -563,13 +563,16 @@ try:
         await bot.process_commands(mes)
 
         if mes.content[0] == "!":
-            print(time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id))
+            log = time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id)
+            with open("logs.txt","w",encoding="utf-8") as f:
+                f.write(log)
+                print(log)
 
         if mes.author.name in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
             await mes.delete()
             print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
 
-        if mes.channel.id == 848863391812026448 and mes.author != bot.user:
+        if mes.channel.id == 848863391812026448 and mes.author != bot.user: # Обработка шахты
             maxsize = 50
 
             checkInPointsMas(mes.author.id)
@@ -577,6 +580,7 @@ try:
             updateTablePoints()
             print(pointsMas,mes.author.name)
 
+    
 
 
     @bot.event # Ивент, проверяющий состояние микрофонов на канале
