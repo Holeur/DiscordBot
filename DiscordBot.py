@@ -66,7 +66,7 @@ try:
         price = 10
         descr = "обработку текста синонимайзером"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             browser.get("https://raskruty.ru/tools/synonymizer/")
             browser.find_element_by_xpath("//*[@id='textarea_i']").send_keys(text)
             browser.find_element_by_xpath("//*[@id='run']").click()
@@ -334,7 +334,7 @@ try:
         price = 100
         descr = "определение цели общего мута"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             main_target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
             print(name)
 
@@ -355,7 +355,7 @@ try:
         price = 10
         descr = "снятие цели общего мута"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             if main_target_member != "":
                 await ctx.send(main_target_member.name+" откреплен")
             else:
@@ -382,7 +382,7 @@ try:
         price = 1
         descr = "очистку чата"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             channel = ctx.channel
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
             await channel.purge(check=is_me)
@@ -402,7 +402,7 @@ try:
         price = 500
         descr = "мут человека в чате"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
             if target_member.id != kolbaskas_id:
                 if target_member.name not in muted_names:
@@ -426,7 +426,7 @@ try:
         price = 50
         descr = "снятие мута чата"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
             if target_member.id != kolbaskas_id:
                 if target_member.name in muted_names:
@@ -450,7 +450,7 @@ try:
         price = 50
         descr = "создание фразы из смайликов"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             mas_lines = []
             mas_lines.append(font_smile+font_smile+font_smile+font_smile+font_smile+font_smile)
             print("Выбрана фраза: "+str(frase))
@@ -481,7 +481,7 @@ try:
         price = 300
         descr = "рандомный переброс людей в канале"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             try:
                 channel = ctx.author.voice.channel
                 list_boys = channel.members
@@ -511,7 +511,7 @@ try:
         price = 100
         descr = "мут человека на сервере"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             print("Member name: "+str(name))
             print("Member id: "+str(ctx.guild))
             print("Server id: "+str(ctx.message.guild.id))
@@ -533,7 +533,7 @@ try:
         price = 10
         descr = "снятие мута человека на сервере"
 
-        if pointsMas[ctx.author.id] >= price:
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
             print("Member name: "+str(name))
             print("Member id: "+str(ctx.guild))
             print("Server id: "+str(ctx.message.guild.id))
