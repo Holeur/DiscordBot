@@ -180,7 +180,7 @@ try:
         id = ctx.guild.get_member(int(name[3:name.find(">")])).id
         stolen_points = random.randint(0,int(pointsMas[id]))
         dice = random.randint(0,100)
-        chance_to_win = 100
+        chance_to_win = 40
         CD = 600 # CoolDown
         price = 100
         descr = "нападение"
