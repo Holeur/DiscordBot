@@ -64,7 +64,7 @@ try:
     @bot.command()
     async def get_sinonim(ctx,text):
         price = 10
-        descr = "определение цели общего мута"
+        descr = "обработку текста синонимайзером"
 
         if pointsMas[ctx.author.id] >= price:
             browser.get("https://raskruty.ru/tools/synonymizer/")
