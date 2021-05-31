@@ -26,14 +26,7 @@ try:
     active_channel_id = ""
     main_guild = ""
     
-
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--no-sandbox")
-    
-    browser = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+    browser = webdriver.Chrome()
     
     def timelog():
         return time.ctime(time.time())
@@ -73,8 +66,8 @@ try:
         browser.get("https://raskruty.ru/tools/synonymizer/")
         browser.find_element_by_xpath("//*[@id='textarea_i']").send_keys(text)
         browser.find_element_by_xpath("//*[@id='run']").click()
-        result = browser.find_element_by_xpath("//*[@id='out']").text
         time.sleep(1)
+        result = browser.find_element_by_xpath("//*[@id='out']").text
         await ctx.send(result)
 
 # 
