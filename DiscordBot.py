@@ -131,7 +131,7 @@ try:
             hasID = True
 
         while hasID:
-            pointsMas[int(mainstr["A"+str(idpos)].value)] = int(mainstr["B"+str(idpos)].value)
+            pointsMas[int(mainstr["A"+str(idpos)].value)] = float(mainstr["B"+str(idpos)].value)
             idpos += 1
             if mainstr["A"+str(idpos)].value == None:
                 hasID = False
@@ -151,7 +151,7 @@ try:
             id_row += 1
         wb.save('pointsBD.xlsx')
 
-    def checkInPointsMas(id): # id должен быть STR
+    def checkInPointsMas(id): 
         if id not in pointsMas:
             pointsMas[id] = 0
 
@@ -561,11 +561,23 @@ try:
     @bot.event
     async def on_message(mes):
         await bot.process_commands(mes)
+
         if mes.content[0] == "!":
             print(time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id))
+
         if mes.author.name in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
             await mes.delete()
             print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
+
+        if mes.channel.id == 848863391812026448 and mes.author != bot.user:
+            maxsize = 50
+
+            checkInPointsMas(mes.author.id)
+            pointsMas[mes.author.id] += 0.001 * len(mes.content) if len(mes.content) <= maxsize else 0.001 * maxsize # Если сообщение больше maxsize символов то упирается в ограничение
+            updateTablePoints()
+            print(pointsMas,mes.author.name)
+
+
 
     @bot.event # Ивент, проверяющий состояние микрофонов на канале
     async def on_voice_state_update(upd_target_member,last_member,new_member):
