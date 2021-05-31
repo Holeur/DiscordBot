@@ -72,7 +72,7 @@ try:
             browser.find_element_by_xpath("//*[@id='run']").click()
             time.sleep(1)
             result = browser.find_element_by_xpath("//*[@id='out']").text
-            await ctx.send(result)
+            await ctx.send("```"+result+"```")
 
             spendPoints(ctx,price)
             await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
@@ -86,23 +86,23 @@ try:
     @bot.command()
     async def help(ctx):
         mes = ""
-        if "points" in ctx.message.content:
+        if "points" in ctx.message.content or "Points" in ctx.message.content:
             with open("helpMessages/helpPoints.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
-        elif "admins" in ctx.message.content:
+        elif "admins" in ctx.message.content or "Admins" in ctx.message.content:
             with open("helpMessages/helpadmins.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
-        elif "voice" in ctx.message.content:
+        elif "voice" in ctx.message.content or "Voice" in ctx.message.content:
             with open("helpMessages/helpvoice.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
-        elif "textchat" in ctx.message.content:
-            with open("helpMessages/helptextchat.txt","r",encoding="utf-8") as f:
+        elif "textchat" in ctx.message.content or "textChat" in ctx.message.content or "Textchat" in ctx.message.content or "TextChat" in ctx.message.content :
+            with open("helpMessages/helptext.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
@@ -349,14 +349,6 @@ try:
         else:
             await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(pointsMas[ctx.author.id]))
 
-            
-
-    def is_me(m):
-        try:
-            return m.author == bot.user or m.content[0] == "!" 
-        except:
-            return False
-
     @bot.command()  
     async def clear_target(ctx):  
         global main_target_member
@@ -378,6 +370,12 @@ try:
 #
 # МЕЛКИЕ ФИЧИ
 #
+
+    def is_me(m):
+        try:
+            return m.author == bot.user or m.content[0] == "!" 
+        except:
+            return False
 
     @bot.command()
     async def clear_shit(ctx): # Очищение сообщений бота или команд
