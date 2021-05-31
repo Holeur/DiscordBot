@@ -196,22 +196,17 @@ try:
                         pointsMas[ctx.author.id] += stolen_points
                         pointsMas[id] -= stolen_points
 
-                        attack_mas[ctx.author.id] = StartTime
-                        print(attack_mas)
-
                         await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
                     else:
                         stolen_points = pointsMas[id]
                         pointsMas[ctx.author.id] += stolen_points
                         pointsMas[id] -= stolen_points
 
-                        attack_mas[ctx.author.id] = StartTime
-                        print(attack_mas)
-
                         await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
                 else:
                     await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и не смог украсть поинты")
-
+                attack_mas[ctx.author.id] = StartTime
+                print(attack_mas)
                 spendPoints(ctx,price)
                 updateTablePoints()
                 await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
