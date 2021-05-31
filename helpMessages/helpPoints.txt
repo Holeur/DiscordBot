@@ -2,6 +2,8 @@ Points:
   !dai_point - Дает один раз 100 поинтов 
   !check_points @NAME - Показывает поинты участника
   !points_leaders - Список лидеров по поинтам
+  !attack @NAME - P:100 - Атакует участника и пытается украсть поинты
+  !send_points @NAME *Количсетво* - Передает поинты пользователю
   
   !give_points @NAME - ADM - Дает участнику поинты
   !remove_points @NAME - ADM - Снимает с участника поинты

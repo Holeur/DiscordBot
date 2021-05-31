@@ -19,9 +19,12 @@ try:
     TOKEN = os.getenv("BOT_TOKEN")
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix='!',intents=intents, help_command=None)
+
     admin_names = []
     muted_names = []
     pointsMas = {}
+    attack_mas = {} # {(id:time),(id:time)}
+
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
@@ -156,6 +159,82 @@ try:
             pointsMas[id] = 0
 
     @bot.command()
+    async def send_points(ctx,name,amount):
+        amount = int(amount)
+        tar_id = ctx.guild.get_member(int(name[3:name.find(">")])).id
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= amount:
+            pointsMas[ctx.author.id] -= amount
+            pointsMas[tar_id] += amount
+            updateTablePoints()
+
+            print(str(ctx.author.name)+" передал "+str(ctx.guild.get_member(tar_id).name)+" "+str(amount)+" поинтов")
+            await ctx.send(str(ctx.author.name)+" передал "+str(ctx.guild.get_member(tar_id).name)+" "+str(amount)+" поинтов")
+        else:
+            await ctx.send("Недостаточно поинтов")
+
+
+
+    @bot.command()
+    async def attack(ctx,name):
+        global attack_mas
+        id = ctx.guild.get_member(int(name[3:name.find(">")])).id
+        stolen_points = random.randint(0,int(pointsMas[id]))
+        dice = random.randint(0,100)
+        chance_to_win = 100
+        CD = 600 # CoolDown
+        price = 100
+        descr = "нападение"
+        StartTime = int(time.time())
+
+        if ctx.author.id not in attack_mas:
+            attack_mas[ctx.author.id] = 0
+
+        if StartTime >= attack_mas[ctx.author.id] + CD:
+            if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
+                if dice <= chance_to_win:
+                    if pointsMas[id] >= stolen_points:
+                        pointsMas[ctx.author.id] += stolen_points
+                        pointsMas[id] -= stolen_points
+
+                        attack_mas[ctx.author.id] = StartTime
+                        print(attack_mas)
+
+                        await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
+                    else:
+                        stolen_points = pointsMas[id]
+                        pointsMas[ctx.author.id] += stolen_points
+                        pointsMas[id] -= stolen_points
+
+                        attack_mas[ctx.author.id] = StartTime
+                        print(attack_mas)
+
+                        await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
+                else:
+                    await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и не смог украсть поинты")
+
+                spendPoints(ctx,price)
+                updateTablePoints()
+                await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+            else:
+                await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
+        else:
+            await ctx.send("У "+str(ctx.author.name)+" еще перезарядка атаки "+str(time.strftime("%H-%M-%S",time.gmtime((StartTime-attack_mas[ctx.author.id]-CD)*-1))))
+            print(attack_mas)
+
+    @bot.command()
+    async def removeTimer(ctx,name):
+        if ctx.author.id in admin_names:
+            target = ctx.guild.get_member(int(name[3:name.find(">")])).id
+
+            if target.id in attack_mas:
+                del attack_mas[target]
+                await ctx.send("У "+str(ctx.guild.get_member(target).name)+" был сброшен таймер")
+            else:
+                await ctx.send("У "+str(ctx.guild.get_member(target).name)+" нету таймера")
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
+    @bot.command()
     async def dai_point(ctx):
         if ctx.author.id not in pointsMas:
             pointsMas[ctx.author.id] = 500
@@ -229,7 +308,7 @@ try:
     async def check_points(ctx,name):
         target_member = ctx.guild.get_member(int(name[3:name.find(">")]))
         if target_member.id in pointsMas:
-            await ctx.send("У "+str(target_member.name)+" "+str(pointsMas[target_member.id])+" очков")
+            await ctx.send("У "+str(target_member.name)+" "+str(round(pointsMas[target_member.id],2))+" очков")
         else:
             await ctx.send("У "+str(target_member.name)+" нету очков")
 
@@ -247,7 +326,6 @@ try:
         else:
             print(ctx.author.name+" НЕ потратил "+str(amount)+" поинтов")
             return False
-
 
 
 #
@@ -562,7 +640,7 @@ try:
     async def on_message(mes):
         await bot.process_commands(mes)
 
-        if mes.content[0] == "!":
+        if len(mes.attachments) == 0 and mes.content[0] == "!":
             log = time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id)
             with open("logs.txt","w",encoding="utf-8") as f:
                 f.write(log)
@@ -573,12 +651,13 @@ try:
             print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
 
         if mes.channel.id == 848863391812026448 and mes.author != bot.user: # Обработка шахты
-            maxsize = 50
+            maxsize = 200
+            oneLet = 0.005
 
             checkInPointsMas(mes.author.id)
-            pointsMas[mes.author.id] += 0.001 * len(mes.content) if len(mes.content) <= maxsize else 0.001 * maxsize # Если сообщение больше maxsize символов то упирается в ограничение
+            pointsMas[mes.author.id] += oneLet * len(mes.content) if len(mes.content) <= maxsize else oneLet * maxsize # Если сообщение больше maxsize символов то упирается в ограничение
             updateTablePoints()
-            print(pointsMas,mes.author.name)
+            #print(pointsMas,mes.author.name)
 
     
 
