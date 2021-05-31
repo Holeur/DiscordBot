@@ -92,17 +92,17 @@ try:
                     mes += line
                 await ctx.send("```"+mes+"```")
         elif "admins" in ctx.message.content or "Admins" in ctx.message.content:
-            with open("helpMessages/helpadmins.txt","r",encoding="utf-8") as f:
+            with open("helpMessages/helpAdmins.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
         elif "voice" in ctx.message.content or "Voice" in ctx.message.content:
-            with open("helpMessages/helpvoice.txt","r",encoding="utf-8") as f:
+            with open("helpMessages/helpVoice.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
         elif "textchat" in ctx.message.content or "textChat" in ctx.message.content or "Textchat" in ctx.message.content or "TextChat" in ctx.message.content :
-            with open("helpMessages/helptext.txt","r",encoding="utf-8") as f:
+            with open("helpMessages/helpText.txt","r",encoding="utf-8") as f:
                 for line in f:
                     mes += line
                 await ctx.send("```"+mes+"```")
