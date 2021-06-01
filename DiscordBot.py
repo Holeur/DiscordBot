@@ -21,7 +21,7 @@ try:
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix='!',intents=intents, help_command=None)
     #r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'r'DBQ=DB.accdb;'
-    connect_str = (r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=F:\INFORMATIKA\SCIENCESHIT\Python\DiscordBot\DB.accdb;') 
+    connect_str = (r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=DB.accdb;') 
     
     
     OpenBD = pyodbc.connect(connect_str) #Открывам базу данных через прописанные данные
