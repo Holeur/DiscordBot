@@ -13,7 +13,8 @@ from selenium import webdriver
 from module1 import *
 import pyscreenshot as ImageGrab
 import turtle
-import pyodbc
+#import pyodbc
+import pymysql
 
 try:
     kolbaskas_id = 259670108266430464
@@ -21,11 +22,14 @@ try:
     intents = discord.Intents.all()
     bot = commands.Bot(command_prefix='!',intents=intents, help_command=None)
     #r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'r'DBQ=DB.accdb;'
-    connect_str = (r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=DB.accdb;') 
+
+    #connect_str = (r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=F:\INFORMATIKA\SCIENCESHIT\Python\DiscordBot\DB.accdb;') 
+    #connect_str = pymysql.connect(host="mulkovak.beget.tech",user ="mulkovak_test",passwd ="8W6o%R&B",db ="mulkovak_test")
+
+    #OpenBD = pymysql.connect(connect_str) #Открывам базу данных через прописанные данные
+    #BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
+
     
-    
-    OpenBD = pyodbc.connect(connect_str) #Открывам базу данных через прописанные данные
-    BDCur = OpenBD.cursor() #Обьявляем курсор в базе данных
 
     admin_names = []
     muted_names = []
@@ -39,6 +43,20 @@ try:
     
     browser = webdriver.Chrome()
     
+    def newExecute(command):
+        connect_str = pymysql.connect(host="mulkovak.beget.tech",user ="mulkovak_test",passwd ="8W6o%R&B",db ="mulkovak_test")
+        BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
+        print("Команда на выполнение:"+str(command))
+
+        BDCur.execute(command)
+        data = BDCur.fetchall()
+        print("Вывод:"+str(data))
+        
+        connect_str.commit()
+        connect_str.close()
+        BDCur.close()
+        return data
+
     def timelog():
         return time.ctime(time.time())
 
@@ -118,8 +136,9 @@ try:
 # СИСТЕМА ПОИНТОВ
 #
     def loadTablePoints(): # Функция проверяет первый элемент в таблице, если есть то собирает строки пока не наткнется на пустую
-        tempMas = BDCur.execute("select id,points,AttackTimer,Admin,Chat_muted from Users").fetchall()
-        BDCur.commit()
+        tempMas = newExecute("select id,points,AttackTimer,Admin,Chat_muted from Users")
+        #tempMas = BDCur.fetchall()
+        #connect_str.commit()
         for user in tempMas:
             pointsMas[int(user[0])] = user[1]
             attack_mas[int(user[0])] = user[2]
@@ -129,14 +148,13 @@ try:
                 muted_names.append(int(user[0]))
         print(pointsMas)
 
-
     #def updateTablePoints(): # Функция обновляет ТАБЛИЦУ по СЛОВАРЮ.
 
     def checkInPointsMas(id): 
         if id not in pointsMas:
             pointsMas[id] = 0
-            BDCur.execute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,0,False,False)")
-            BDCur.commit()
+            newExecute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,0,0,0);")
+            #connect_str.commit()
 
     @bot.command()
     async def send_points(ctx,name,amount):
@@ -152,9 +170,9 @@ try:
             pointsMas[ctx.author.id] -= amount
             pointsMas[tar_id] += amount
             #updateTablePoints()
-            BDCur.execute("Update Users set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
-            BDCur.execute("Update Users set Points="+str(pointsMas[tar_id])+" where id='"+str(tar_id)+"';")
-            BDCur.commit()
+            newExecute("Update Users set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
+            newExecute("Update Users set Points="+str(pointsMas[tar_id])+" where id='"+str(tar_id)+"';")
+            #connect_str.commit()
 
             print(str(ctx.author.name)+" передал "+str(ctx.guild.get_member(tar_id).name)+" "+str(amount)+" поинтов")
             await ctx.send(str(ctx.author.name)+" передал "+str(ctx.guild.get_member(tar_id).name)+" "+str(amount)+" поинтов")
@@ -197,9 +215,11 @@ try:
                     print(attack_mas)
                     spendPoints(ctx,price)
                     #updateTablePoints()
-                    BDCur.execute("Update Users set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
-                    BDCur.execute("Update Users set AttackTimer="+str(attack_mas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
-                    BDCur.commit()
+                    checkInPointsMas(ctx.author.id)
+                    newExecute("Update Users set Points="+str(pointsMas[ctx.author.id])+",AttackTimer="+str(attack_mas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты и таймер в БД
+                    newExecute("Update Users set Points="+str(pointsMas[id])+",AttackTimer="+str(attack_mas[id])+" where id='"+str(id)+"';") # Обновляем поинты и таймер в БД
+
+                    #connect_str.commit()
 
                     await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
                 else:
@@ -231,8 +251,8 @@ try:
         if ctx.author.id not in pointsMas:
             checkInPointsMas(ctx.author.id)
             pointsMas[ctx.author.id] = 500
-            BDCur.execute("Update User set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
-            BDCur.commit()
+            newExecute("Update Users set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
+            #connect_str.commit()
             await ctx.send("Получите распишитесь")
         else:
             await ctx.send("Поинты уже получены")
@@ -258,8 +278,8 @@ try:
                 points = int(point)
 
                 pointsMas[target_member.id] = pointsMas[target_member.id] + points
-                BDCur.execute("Update Users set Points="+str(pointsMas[target_member.id])+" where id='"+str(target_member.id)+"';") # Обновляем поинты в БД
-                BDCur.commit()
+                newExecute("Update Users set Points="+str(pointsMas[target_member.id])+" where id='"+str(target_member.id)+"';") # Обновляем поинты в БД
+                #connect_str.commit()
 
                 print(timelog()+" Выдача "+target_member.name+" "+str(points)+" очков")
                 print(pointsMas)
@@ -278,8 +298,8 @@ try:
                 points = int(point)
 
                 pointsMas[target_member.id] = pointsMas[target_member.id] - points
-                BDCur.execute("Update Users set Points="+str(pointsMas[target_member.id])+" where id='"+str(target_member.id)+"';") # Обновляем поинты в БД
-                BDCur.commit()
+                newExecute("Update Users set Points="+str(pointsMas[target_member.id])+" where id='"+str(target_member.id)+"';") # Обновляем поинты в БД
+                #connect_str.commit()
 
                 print(timelog()+" Снятие у "+target_member.name+" "+str(points)+" очков")
                 print(pointsMas)
@@ -298,8 +318,8 @@ try:
                 points = int(point)
 
                 pointsMas[target_member.id] = points
-                BDCur.execute("Update Users set Points="+str(pointsMas[target_member.id])+" where id='"+str(target_member.id)+"';") # Обновляем поинты в БД
-                BDCur.commit()
+                newExecute("Update Users set Points="+str(pointsMas[target_member.id])+" where id='"+str(target_member.id)+"';") # Обновляем поинты в БД
+                #connect_str.commit()
 
                 print(timelog()+" Теперь у "+target_member.name+" "+str(points)+" очков")
                 print(pointsMas)
@@ -326,8 +346,9 @@ try:
             if ctx.author.id in pointsMas:
                 if pointsMas[ctx.author.id] >= amount:
                     pointsMas[ctx.author.id] -= amount
-                    BDCur.execute("Update Users set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
-                    BDCur.commit()
+                    checkInPointsMas(ctx.author.id)
+                    newExecute("Update Users set Points="+str(pointsMas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты в БД
+                    #connect_str.commit()
 
                     print(ctx.author.name+" потратил "+str(amount)+" поинтов")
                     return True
@@ -399,8 +420,8 @@ try:
                     if admin_member.id not in admin_names:
                         checkInPointsMas(admin_member.id)
                         admin_names.append(admin_member.id)
-                        BDCur.execute("Update Users set Admin=True where id='"+str(admin_member.id)+"';")
-                        BDCur.commit()
+                        newExecute("Update Users set Admin=True where id='"+str(admin_member.id)+"';")
+                        #connect_str.commit()
                         await ctx.send(admin_member.name+" был добавлен в список админов")
                     else:
                         await ctx.send(admin_member.name+" уже в списке админов")
@@ -420,8 +441,8 @@ try:
                     if admin_member.id in admin_names:
                         checkInPointsMas(admin_member.id)
                         admin_names.remove(admin_member.id)
-                        BDCur.execute("Update Users set Admin=False where id='"+str(admin_member.id)+"';")
-                        BDCur.commit()
+                        newExecute("Update Users set Admin=False where id='"+str(admin_member.id)+"';")
+                        #connect_str.commit()
                         await ctx.send(admin_member.name+" был убран из списка админов")
                     else:
                         await ctx.send(admin_member.name+" нету в списке админов")
@@ -518,8 +539,8 @@ try:
 
                     if target_member.name not in muted_names:
                         muted_names.append(target_member.name)
-                        BDCur.execute("update users set Chat_muted=True where id='"+str(target_member.id)+"';")
-                        BDCur.commit()
+                        newExecute("update Users set Chat_muted=True where id='"+str(target_member.id)+"';")
+                        #connect_str.commit()
                         await ctx.send("Кто этот ваш "+str(target_member.name))
                         print("muted_names updated: "+str(muted_names))
                     else:
@@ -545,8 +566,8 @@ try:
                 if target_member.id != kolbaskas_id:
                     if target_member.name in muted_names:
                         del muted_names[muted_names.index(target_member.name)]
-                        BDCur.execute("update users set Chat_muted=False where id='"+str(target_member.id)+"';")
-                        BDCur.commit()
+                        newExecute("update Users set Chat_muted=False where id='"+str(target_member.id)+"';")
+                        #connect_str.commit()
                         print("muted_names updated: "+str(muted_names))
                         await ctx.send(target_member.name+" вернулся в село натуралов")
                     else:
@@ -703,8 +724,8 @@ try:
     #    try:
     #        exCom = "INSERT into Users (ID,NAME,AttackTimer,Points) values ('"+str(ctx.author.id)+"','"+str(ctx.author.name)+"',"+str(attack_mas[ctx.author.id] if ctx.author.id in attack_mas else 0)+","+str(pointsMas[ctx.author.id] if ctx.author.id in pointsMas else 0)+");"
     #        print(exCom)
-    #        BDCur.execute(exCom)
-    #        BDCur.commit()
+    #        newExecute(exCom)
+    #        #connect_str.commit()
     #        print("Добавлен в базу данных")
     #    except Exception as e:
     #        print(e)
@@ -721,17 +742,15 @@ try:
         for reaction in reactionsList:
             await pasmes.add_reaction(reaction) # КР, ЗЕЛ
 
-
     @bot.command()
     async def executeSQL(ctx,com):
         try:
-            ret = BDCur.execute(com).fetchall()
-            mes = ""
-            if ret != None:
-                for elem in ret:
-                    mes += str(elem)+"\n"
-            await ctx.send(mes)
-            BDCur.commit()
+            ret = newExecute(com)
+            if ret != [] and ret != ():
+                await ctx.send(ret)
+            else:
+                await ctx.send("Команда выполнена")
+            #connect_str.commit()
         except Exception as e:
             await ctx.send("SQL команда не прошла: "+str(e))
 #
@@ -783,7 +802,6 @@ try:
 
                     print(win)
                     if win:
-
                         if len(reaction.message.reactions) >= 6:
                             result = "X"+result[:4]
                             await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
@@ -795,8 +813,8 @@ try:
                                 await pasmes.delete()
                                 admin_names.append(user.id)
                                 checkInPointsMas(user.id)
-                                BDCur.execute("update users set admin=True where id='"+str(user.id)+"';")
-                                BDCur.commit()
+
+                                newExecute("update Users set admin=True where id='"+str(user.id)+"';")
                                 await reaction.message.channel.send(user.name+" становится админом")
                             else:
                                 for react in reactionsList:
