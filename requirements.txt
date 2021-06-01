@@ -7,3 +7,5 @@ youtube_dl
 colorlog
 PyNaCl
 openpyxl
+Pillow
+pyodbc
