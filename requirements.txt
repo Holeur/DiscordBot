@@ -10,3 +10,4 @@ openpyxl
 Pillow
 pyodbc
 pyscreenshot
+pymysql
