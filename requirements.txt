@@ -9,3 +9,5 @@ PyNaCl
 openpyxl
 Pillow
 pyodbc
+pyscreenshot
+PIL
