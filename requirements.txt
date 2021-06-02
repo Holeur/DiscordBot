@@ -8,6 +8,5 @@ colorlog
 PyNaCl
 openpyxl
 Pillow
-pyodbc
 pyscreenshot
 pymysql

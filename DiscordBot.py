@@ -29,22 +29,22 @@ try:
     #OpenBD = pymysql.connect(connect_str) #Открывам базу данных через прописанные данные
     #BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
 
-    
-
     admin_names = []
     muted_names = []
     pointsMas = {}
     attack_mas = {} # {(id:time),(id:time)}
     alpNumbers = {"1️⃣":"1","0️⃣":"0","2️":"2","3️⃣":"3","4️⃣":"4","5️⃣":"5","6️⃣":"6","7️⃣":"7","8️⃣":"8","9️⃣":"9","🇦":"A","🇧":"B","🇨":"C","🇩":"D","🇪":"E","🇫":"F"}
-
+    alpNumbers = {"1️⃣":"1","0️⃣":"0","2️":"2","3️⃣":"3","4️⃣":"4","5️⃣":"5","6️⃣":"6","7️⃣":"7","8️⃣":"8","9️⃣":"9","🇦":"A","🇧":"B","🇨":"C","🇩":"D","🇪":"E","🇫":"F"}
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
     
-    browser = webdriver.Chrome()
-    
     def newExecute(command):
-        connect_str = pymysql.connect(host="mulkovak.beget.tech",user ="mulkovak_test",passwd ="8W6o%R&B",db ="mulkovak_test")
+        host_os = str(os.getenv("BD_HOST"))
+        user_os = os.getenv("BD_USER")
+        pw_os = os.getenv("BD_PASSWORD")
+
+        connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306) 
         BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
         print("Команда на выполнение:"+str(command))
 
@@ -78,6 +78,7 @@ try:
 
     @bot.command()
     async def get_sinonim(ctx,text):
+        browser = webdriver.Chrome()
         price = 10
         descr = "обработку текста синонимайзером"
 
@@ -732,15 +733,17 @@ try:
 
     @bot.command()
     async def steal_admin(ctx):
-        global pasmes,result,green_pos,Main_user
+        global pasmes,result,green_pos,Main_user,close_em
         Main_user = ctx.author
         result = "-----"
         pasmes = await ctx.send("НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
         reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
+        close_em = "❌"
         green_pos = random.randint(0,5)
         reactionsList[green_pos] = "🟩"
         for reaction in reactionsList:
             await pasmes.add_reaction(reaction) # КР, ЗЕЛ
+        await pasmes.add_reaction(close_em) # КР, ЗЕЛ
 
     @bot.command()
     async def executeSQL(ctx,com):
@@ -771,75 +774,85 @@ try:
 
     @bot.event
     async def on_reaction_add(reaction,user):
-        global pasmes,result,green_pos,Main_user
+        global pasmes,result,green_pos,Main_user,close_em
         try:
             if user == Main_user:
                 if reaction.message == pasmes and user != bot.user:
-                    print(reaction)
-
-                    choisen_pos = reaction.message.reactions.index(reaction)
-                    reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
-
-                    print(choisen_pos)
-                    print(green_pos)
-
-                    changed_map = [4,1,5,2,0,3]
-
-                    if green_pos == 0 and choisen_pos == changed_map[0]:
-                        win = True
-                    elif green_pos == 1 and choisen_pos == changed_map[1]:
-                        win = True
-                    elif green_pos == 2 and choisen_pos == changed_map[2]:
-                        win = True
-                    elif green_pos == 3 and choisen_pos == changed_map[3]:
-                        win = True
-                    elif green_pos == 4 and choisen_pos == changed_map[4]:
-                        win = True
-                    elif green_pos == 5 and choisen_pos == changed_map[5]:
-                        win = True
+                    if reaction.emoji == close_em:
+                        zal = await reaction.message.channel.send("Вырубаю залупу")
+                        await pasmes.delete()
+                        time.sleep(0.5)
+                        await zal.delete()
                     else:
-                        win = False
+                        print(reaction)
 
-                    print(win)
-                    if win:
-                        if len(reaction.message.reactions) >= 6:
-                            result = "X"+result[:4]
-                            await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
-                            await pasmes.clear_reactions()
-                            green_pos = random.randint(0,5)
-                            reactionsList[green_pos] = "🟩"
+                        choisen_pos = reaction.message.reactions.index(reaction)
+                        reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
 
-                            if result[4] == "X":
-                                await pasmes.delete()
-                                admin_names.append(user.id)
-                                checkInPointsMas(user.id)
+                        print(choisen_pos)
+                        print(green_pos)
 
-                                newExecute("update Users set admin=True where id='"+str(user.id)+"';")
-                                await reaction.message.channel.send(user.name+" становится админом")
+                    
+                        
+                        changed_map = [4,1,5,2,0,3]
+
+                        if green_pos == 0 and choisen_pos == changed_map[0]:
+                            win = True
+                        elif green_pos == 1 and choisen_pos == changed_map[1]:
+                            win = True
+                        elif green_pos == 2 and choisen_pos == changed_map[2]:
+                            win = True
+                        elif green_pos == 3 and choisen_pos == changed_map[3]:
+                            win = True
+                        elif green_pos == 4 and choisen_pos == changed_map[4]:
+                            win = True
+                        elif green_pos == 5 and choisen_pos == changed_map[5]:
+                            win = True
+                        else:
+                            win = False
+
+                        print(win)
+                        if win:
+                            if len(reaction.message.reactions) >= 6:
+                                result = "X"+result[:4]
+                                await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
+                                await pasmes.clear_reactions()
+                                green_pos = random.randint(0,5)
+                                reactionsList[green_pos] = "🟩"
+
+                                if result[4] == "X":
+                                    await pasmes.delete()
+                                    admin_names.append(user.id)
+                                    checkInPointsMas(user.id)
+
+                                    newExecute("update Users set admin=True where id='"+str(user.id)+"';")
+                                    await reaction.message.channel.send(user.name+" становится админом")
+                                else:
+                                    for react in reactionsList:
+                                        await pasmes.add_reaction(react) # КР, ЗЕЛ
+                                    await pasmes.add_reaction(close_em) # КР, ЗЕЛ
                             else:
+                                print("Терпение")
+                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
+                                await reaction.remove(user)
+                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
+                        else:
+                            if len(reaction.message.reactions) >= 6:
+                                print("Reset Game")
+                                result = "-----"
+                                await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
+                                await pasmes.clear_reactions()
+                                green_pos = random.randint(0,5)
+                                reactionsList[green_pos] = "🟩"
+
                                 for react in reactionsList:
                                     await pasmes.add_reaction(react) # КР, ЗЕЛ
-                        else:
-                            print("Терпение")
-                            await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
-                            await reaction.remove(user)
-                            await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
-                    else:
-                        if len(reaction.message.reactions) >= 6:
-                            print("Reset Game")
-                            result = "-----"
-                            await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
-                            await pasmes.clear_reactions()
-                            green_pos = random.randint(0,5)
-                            reactionsList[green_pos] = "🟩"
-
-                            for react in reactionsList:
-                                await pasmes.add_reaction(react) # КР, ЗЕЛ
-                        else:
-                            print("Терпение")
-                            await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
-                            await reaction.remove(user)
-                            await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
+                                await pasmes.add_reaction(close_em) # КР, ЗЕЛ
+                            else:
+                                print("Терпение")
+                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
+                                await reaction.remove(user)
+                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
             elif user != bot.user:
                 delmes = await reaction.message.channel.send(user.name+" руки убрал")
                 await reaction.remove(user)
@@ -878,6 +891,11 @@ try:
     async def on_voice_state_update(upd_target_member,last_member,new_member):
         global main_target_member,vc
         print(' У '+str(upd_target_member.name)+" изменился микрофон")
+
+        log = time.ctime(time.time())+" "+str(upd_target_member.name)+" "+str(upd_target_member.id)
+        with open("logs.txt","a",encoding="utf-8") as f:
+            f.write(log+"\n")
+            print(log)
 
         # print(list)
         if main_target_member == upd_target_member and upd_target_member.voice.self_mute == False:
