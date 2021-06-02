@@ -15,7 +15,6 @@ import pyscreenshot as ImageGrab
 #import turtle
 #import pyodbc
 import pymysql
-import _tkinter
 
 try:
     kolbaskas_id = 259670108266430464
