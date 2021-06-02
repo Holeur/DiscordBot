@@ -44,7 +44,7 @@ try:
     browser = webdriver.Chrome()
     
     def newExecute(command):
-        connect_str = pymysql.connect(host="mulkovak.beget.tech",user ="mulkovak_test",passwd ="8W6o%R&B",db ="mulkovak_test")
+        connect_str = pymysql.connect(host="mulkovak.beget.tech", user = os.getenv("BD_USER"), passwd = os.getenv("BD_PASSWORD"), db ="mulkovak_test")
         BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
         print("Команда на выполнение:"+str(command))
 
