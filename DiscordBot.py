@@ -6,16 +6,13 @@ import asyncio
 import time
 import bestdllever
 import os
-import youtube_dl
 import random
 import selenium
 from selenium import webdriver
 from module1 import *
 import pyscreenshot as ImageGrab
 import turtle
-#import pyodbc
 import pymysql
-import _tkinter
 
 try:
     kolbaskas_id = 259670108266430464
