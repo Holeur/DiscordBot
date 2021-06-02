@@ -11,8 +11,8 @@ import random
 import selenium
 from selenium import webdriver
 from module1 import *
-#import pyscreenshot as ImageGrab
-#import turtle
+import pyscreenshot as ImageGrab
+import turtle
 #import pyodbc
 import pymysql
 
@@ -38,22 +38,28 @@ try:
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
+
+    host_os = str(os.getenv("BD_HOST"))
+    user_os = os.getenv("BD_USER")
+    pw_os = os.getenv("BD_PASSWORD")
+    connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306) 
     
     def newExecute(command):
-        host_os = str(os.getenv("BD_HOST"))
-        user_os = os.getenv("BD_USER")
-        pw_os = os.getenv("BD_PASSWORD")
+        global connect_str
 
-        connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306) 
         BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
-        print("Команда на выполнение:"+str(command))
 
+        #print(BDCur.connection)
+        if BDCur.connection:
+            connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306)
+            BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
+        print("Команда на выполнение:"+str(command))
+            
         BDCur.execute(command)
         data = BDCur.fetchall()
         print("Вывод:"+str(data))
         
         connect_str.commit()
-        connect_str.close()
         BDCur.close()
         return data
 
@@ -509,7 +515,7 @@ try:
 
     def is_me(m):
         try:
-            return m.author == bot.user or m.content[0] == "!" 
+            return m.author == bot.user or m.content[0] == "!"
         except:
             return False
 
@@ -517,14 +523,25 @@ try:
     async def clear_shit(ctx): # Очищение сообщений бота или команд
         price = 1
         descr = "очистку чата"
+        limits = 100
 
         if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
-            channel = ctx.channel
-            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
-            await channel.purge(check=is_me)
+            BD_Mes = newExecute("select MesID from Messages")
 
+            ALLMessages = await ctx.channel.history(limit=limits).flatten() # Собираются два массива, из бд и из сообщений на удаление.
+            for mes in ALLMessages:
+                for BD_message in BD_Mes:
+                    #print(BD_message[0],mes.id)
+                    if int(mes.id) == int(BD_message[0]): # Находятся сообщения, имеющиеся в БД и удаляются
+                        #print("----------")
+                        #print("-TARGETED-")
+                        #print("----------")
+                        newExecute("delete from Messages where MesID='"+str(mes.id)+"';") 
+
+            #print(BD_Mes,ALLMessages)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+            await ctx.channel.purge(check=is_me,limit=limits) # После удаляются все сообщения
             spendPoints(ctx,price)
-            
         else:
             await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
@@ -679,6 +696,7 @@ try:
             name = ctx.guild.get_member(int(id_name[3:id_name.find(">")])).name
             price = 10
             descr = "снятие мута человека на сервере"
+            checkInPointsMas(ctx.author.id)
 
             if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
                 print("Member name: "+str(name))
@@ -731,31 +749,68 @@ try:
     #    except Exception as e:
     #        print(e)
 
+    def updateKey(oldkey,map):
+        newKey = ""
+        if len(map) < len(oldkey):
+            for elem in map:
+                newKey += oldkey[elem]
+            newKey += oldkey[len(map):]
+        elif len(map) > len(oldkey):
+            print("Карта больше ключа. Ключ не меняется")
+            newKey = oldkey
+        else:
+            for elem in map:
+                newKey += oldkey[elem]
+
+        return newKey
+
     @bot.command()
     async def steal_admin(ctx):
-        global pasmes,result,green_pos,Main_user,close_em
-        Main_user = ctx.author
-        result = "-----"
-        pasmes = await ctx.send("НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
-        reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
-        close_em = "❌"
-        green_pos = random.randint(0,5)
-        reactionsList[green_pos] = "🟩"
-        for reaction in reactionsList:
-            await pasmes.add_reaction(reaction) # КР, ЗЕЛ
-        await pasmes.add_reaction(close_em) # КР, ЗЕЛ
+        global pasmes,result,green_pos,Main_user,close_em,changed_map,key
+
+        price = 1000
+        descr = "игру для админки"
+        checkInPointsMas(ctx.author.id)
+
+        if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
+            Main_user = ctx.author
+            changed_map = [4,1,5,2,0,3]
+            result = "-----"
+            key = "ЗЕЛЕНЫЕ"
+            key = updateKey(key,changed_map)
+            close_em = "❌"
+            reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
+
+            spendPoints(ctx,price)
+            await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+
+            pasmes = await ctx.send("НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+            green_pos = random.randint(0,5)
+            reactionsList[green_pos] = "🟩"
+            newExecute("insert into Messages values ('"+str(ctx.author.id)+"','"+str(pasmes.id)+"','Steal_Admin_Message',Null)")
+            for reaction in reactionsList:
+                await pasmes.add_reaction(reaction) # КР, ЗЕЛ
+            await pasmes.add_reaction(close_em) # КР, ЗЕЛ
+        else:
+            await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
 
     @bot.command()
     async def executeSQL(ctx,com):
         try:
-            ret = newExecute(com)
-            if ret != [] and ret != ():
-                await ctx.send(ret)
+            if ctx.author.id in admin_names:
+                ret = newExecute(com)
+                if ret != [] and ret != ():
+                    await ctx.send(ret)
+                else:
+                    await ctx.send("Команда выполнена")
             else:
-                await ctx.send("Команда выполнена")
-            #connect_str.commit()
+                ctx.send(ctx.author.name+" не является администратором")
         except Exception as e:
             await ctx.send("SQL команда не прошла: "+str(e))
+
+    @bot.command()
+    async def test(ctx):
+        print(ctx.message.id)
 #
 # ИВЕНТЫ
 #
@@ -774,16 +829,19 @@ try:
 
     @bot.event
     async def on_reaction_add(reaction,user):
-        global pasmes,result,green_pos,Main_user,close_em
+        global pasmes,result,green_pos,Main_user,close_em,changed_map,key
         try:
             if user == Main_user:
                 if reaction.message == pasmes and user != bot.user:
-                    if reaction.emoji == close_em:
+                    #local_pasmes = newExecute("select ")
+
+                    if reaction.emoji == close_em: # Проверка если нажат крест
                         zal = await reaction.message.channel.send("Вырубаю залупу")
+                        newExecute("delete from Messages where MesID='"+str(pasmes.id)+"'")
                         await pasmes.delete()
                         time.sleep(0.5)
                         await zal.delete()
-                    else:
+                    else: 
                         print(reaction)
 
                         choisen_pos = reaction.message.reactions.index(reaction)
@@ -791,10 +849,6 @@ try:
 
                         print(choisen_pos)
                         print(green_pos)
-
-                    
-                        
-                        changed_map = [4,1,5,2,0,3]
 
                         if green_pos == 0 and choisen_pos == changed_map[0]:
                             win = True
@@ -812,35 +866,39 @@ try:
                             win = False
 
                         print(win)
-                        if win:
-                            if len(reaction.message.reactions) >= 6:
+                        if win: # Правильное нажатие
+                            if len(reaction.message.reactions) >= 6: # Ожидание наличие как минимум 6 реакций 
                                 result = "X"+result[:4]
-                                await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
+                                await pasmes.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                                newExecute("update Messages set OtherInf='"+str(result)+"' where MesID='"+str(reaction.message.id)+"'")
                                 await pasmes.clear_reactions()
                                 green_pos = random.randint(0,5)
                                 reactionsList[green_pos] = "🟩"
 
-                                if result[4] == "X":
+                                if result[4] == "X": # Проверка на победу
                                     await pasmes.delete()
                                     admin_names.append(user.id)
                                     checkInPointsMas(user.id)
 
                                     newExecute("update Users set admin=True where id='"+str(user.id)+"';")
+                                    newExecute("delete from Messages where MesID='"+str(pasmes.id)+"';")
                                     await reaction.message.channel.send(user.name+" становится админом")
-                                else:
+
+                                else: # Если победы нет, то
                                     for react in reactionsList:
                                         await pasmes.add_reaction(react) # КР, ЗЕЛ
                                     await pasmes.add_reaction(close_em) # КР, ЗЕЛ
-                            else:
+                            else: # Если 6 реакций нету, то
                                 print("Терпение")
-                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
+                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
                                 await reaction.remove(user)
-                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
-                        else:
-                            if len(reaction.message.reactions) >= 6:
+                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                        else: # Неправильное нажатие
+                            if len(reaction.message.reactions) >= 6: # Ожидание наличие как минимум 6 реакций 
                                 print("Reset Game")
                                 result = "-----"
-                                await pasmes.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
+                                await pasmes.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                                newExecute("update Messages set OtherInf='"+str(result)+"' where MesID='"+str(reaction.message.id)+"'")
                                 await pasmes.clear_reactions()
                                 green_pos = random.randint(0,5)
                                 reactionsList[green_pos] = "🟩"
@@ -850,12 +908,13 @@ try:
                                 await pasmes.add_reaction(close_em) # КР, ЗЕЛ
                             else:
                                 print("Терпение")
-                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
+                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
                                 await reaction.remove(user)
-                                await reaction.message.edit(content="НАЖМИТЕ НА ЗЕЛЕНЫЕ ["+result+"]")
-            elif user != bot.user:
+                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+            elif user != bot.user: # Проверка хозяина сообщения
                 delmes = await reaction.message.channel.send(user.name+" руки убрал")
                 await reaction.remove(user)
+                time.sleep(0.5)
                 await delmes.delete()
 
         except Exception as e:
