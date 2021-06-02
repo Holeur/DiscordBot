@@ -12,7 +12,7 @@ import selenium
 from selenium import webdriver
 from module1 import *
 import pyscreenshot as ImageGrab
-import turtle
+#import turtle
 #import pyodbc
 import pymysql
 import _tkinter
