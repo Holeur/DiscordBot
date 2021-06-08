@@ -11,9 +11,9 @@ import selenium
 from selenium import webdriver
 from module1 import *
 import pyscreenshot as ImageGrab
-#import turtle
-#import pyodbc
+import turtle
 import pymysql
+import math
 
 try:
     kolbaskas_id = 259670108266430464
@@ -30,26 +30,37 @@ try:
 
     admin_names = []
     muted_names = []
+    Users_stats = {}
+    CLICKER_MESSAGES = []
     pointsMas = {}
-    attack_mas = {} # {(id:time),(id:time)}
-    alpNumbers = {"1️⃣":"1","0️⃣":"0","2️":"2","3️⃣":"3","4️⃣":"4","5️⃣":"5","6️⃣":"6","7️⃣":"7","8️⃣":"8","9️⃣":"9","🇦":"A","🇧":"B","🇨":"C","🇩":"D","🇪":"E","🇫":"F"}
+    Attack_Timer_Mas = {} # {(id:time),(id:time)}
     alpNumbers = {"1️⃣":"1","0️⃣":"0","2️":"2","3️⃣":"3","4️⃣":"4","5️⃣":"5","6️⃣":"6","7️⃣":"7","8️⃣":"8","9️⃣":"9","🇦":"A","🇧":"B","🇨":"C","🇩":"D","🇪":"E","🇫":"F"}
     main_target_member = ""
     active_channel_id = ""
     main_guild = ""
+
+    active_messages = {} # Массив с активными сообщениями USERID = [[MESID,TYPE],[MESID,TYPE]]
 
     host_os = str(os.getenv("BD_HOST"))
     user_os = os.getenv("BD_USER")
     pw_os = os.getenv("BD_PASSWORD")
     connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306) 
     
+    def updateLocalActiveMes(): # ИСПРАВИТЬ АЛГОРИТМ СБОР АКТИВНЫХ СООБЩЕНИЙ
+        global active_messages
+        BDMessages = newExecute("select * from Messages")
+        active_messages = []
+        for message in BDMessages:
+            active_messages.append([int(message[0]),int(message[1]),message[2]])
+        print("Update succeceful: "+str(active_messages))
+
     def newExecute(command):
         global connect_str
-
         BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
 
         #print(BDCur.connection)
         if BDCur.connection:
+            print("Переоткрытие соединения")
             connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306)
             BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
         print("Команда на выполнение:"+str(command))
@@ -59,7 +70,7 @@ try:
         print("Вывод:"+str(data))
         
         connect_str.commit()
-        BDCur.close()
+        #BDCur.close()
         return data
 
     def timelog():
@@ -67,7 +78,7 @@ try:
 
     @bot.event
     async def on_ready(): # Ивент срабатывает при запуске бота
-        loadTablePoints()
+        loadMassivesFromBD()
 
         print("ADMINS:"+str(admin_names))
         print("MUTED_BOYS"+str(muted_names))
@@ -75,7 +86,6 @@ try:
         print(bot.user.id)
         print(bot.guilds)
         print('------')
-
 
 #
 # НАЙТИ ТЕКСТ С СИНОНИМАМИ
@@ -139,27 +149,170 @@ try:
                 await ctx.send("```"+mes+"```")
 
 #
+# БОЕВКА
+#
+    def loadStats():
+        global Users_stats
+        Users_stats = {}
+        data = newExecute("select * from UserStats")
+        for user in data:
+            Users_stats[int(user[0])] = {"Damage":user[1],"Defence":user[2],"Speed":user[3]}
+        print("Loaded from DB:",Users_stats)
+
+    @bot.command()
+    async def set_stat(ctx,slap,type,number): # Установка стата пользователю
+        global Users_stats
+        if ctx.author.id in admin_names:
+            target = ctx.guild.get_member(int(slap[3:slap.find(">")]))
+            checkInPointsMas(target.id)
+            Users_stats[target.id][str(type.title())] = int(number)
+            newExecute("update UserStats set User"+str(type.title())+"="+number+" where UserID='"+str(target.id)+"';")
+            print("stats mas updated:",Users_stats)
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
+    @bot.command()
+    async def check_stat(ctx,slap): # Функция показывает статы юзера
+        global Users_stats
+        target = ctx.guild.get_member(int(slap[3:slap.find(">")]))
+        checkInPointsMas(target.id)
+        await ctx.send("```"+str(target.name)+" - Поинты: "+str(pointsMas[target.id])+"\n\nАтака: "+str(Users_stats[target.id]["Damage"])+"\nЗащита: "+str(Users_stats[target.id]["Defence"])+"\nСкорость: "+str(Users_stats[target.id]["Speed"])+"```")
+
+    @bot.command()
+    async def attack(ctx,name):
+        global Attack_Timer_Mas,Users_stats
+        try:
+            target = ctx.guild.get_member(int(name[3:name.find(">")]))
+            id = target.id
+
+            #loadStats()
+
+            target_stats = Users_stats[id]
+            my_stats = Users_stats[ctx.author.id] # Берем из локального массива статы цели и автора
+
+            print("taken stats from "+str(target.name)+" "+str(ctx.author.name)+": "+str(target_stats)+" "+str(my_stats))
+
+            maxstolen = int(pointsMas[id]) - target_stats["Defence"]
+            if maxstolen < 0:
+                maxstolen = 0
+
+            stolen_points = random.randint(0,maxstolen) 
+            dice = random.randint(0,100)
+            chance_to_win = math.ceil(50 * my_stats['Damage'] / target_stats['Defence']) # Шанс победы
+
+            if chance_to_win > 100:
+                chance_to_win = 100
+            elif chance_to_win < 0:
+                chance_to_win = 0
+
+            CD = 600 - my_stats['Speed'] # CoolDown
+            price = 100
+            descr = "нападение"
+            StartTime = int(time.time())
+
+            attacker_stat = "```"+str(ctx.author.name)+" - Поинты: "+str(pointsMas[ctx.author.id])+"\n\nАтака: "+str(my_stats["Damage"])+"\nЗащита: "+str(my_stats["Defence"])+"\nСкорость: "+str(my_stats["Speed"])+"```"
+            defender_stat = "```"+str(target.name)+" - Поинты: "+str(pointsMas[target.id])+"\n\nАтака: "+str(target_stats["Damage"])+"\nЗащита: "+str(target_stats["Defence"])+"\nСкорость: "+str(target_stats["Speed"])+"```"
+
+            if ctx.author.id not in Attack_Timer_Mas:
+                Attack_Timer_Mas[ctx.author.id] = 0
+
+            if StartTime >= Attack_Timer_Mas[ctx.author.id] + CD: # Две проверки на наличие поинтов и пройденного КД
+                if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price: 
+                    first_stat = await ctx.send(attacker_stat)
+                    main_mes = await ctx.send("```"+str(ctx.author.name)+" нападает на "+str(target.name)+"```")
+                    second_stat = await ctx.send(defender_stat)
+                    await ctx.send("```ШАНС НА ПОБЕДУ: <<<"+str(chance_to_win)+"%>>> ( 50(БАЗА) * "+str(my_stats["Damage"])+"(УРОН НАПАДАЮЩЕГО) - "+str(target_stats["Defence"])+"(БРОНЯ ЗАЩИЩАЮЩЕГОСЯ) )\nЛУЧШЕЕ НАПАДЕНИЕ ДАСТ <<<"+str(maxstolen)+">>> ПОИНТОВ ( "+str(pointsMas[id])+"(ПОИНТЫ ЗАЩИЩАЮЩЕГОСЯ) - "+str(target_stats["Defence"])+"(БРОНЯ ЗАЩИЩАЮЩЕГОСЯ) )```")
+
+                    for sec in range(1,4):
+                        await main_mes.edit(content = "```"+str(ctx.author.name)+" нападает на "+str(target.name)+" и"+"."*sec+"```")
+                        time.sleep(1)
+
+                    if dice <= chance_to_win:
+                        if pointsMas[id] >= stolen_points: # Если у цели поинтов больше рола то...
+                            pointsMas[ctx.author.id] += stolen_points
+                            pointsMas[id] -= stolen_points
+
+                            await main_mes.edit(content = "```"+str(ctx.author.name)+" нападает на "+str(target.name)+" и <<<Невежественно отбирает "+str(stolen_points)+" поинтов у "+str(target.name)+">>> ```")
+                            await first_stat.edit(content=attacker_stat)
+                            await second_stat.edit(content=defender_stat)
+                            #await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
+                        else:
+                            stolen_points = pointsMas[id]
+                            pointsMas[ctx.author.id] += stolen_points
+                            pointsMas[id] -= stolen_points
+
+                            await main_mes.edit(content = "```"+str(ctx.author.name)+" нападает на "+str(target.name)+" и <<<Вырывает ссаные "+str(stolen_points)+" поинтов из кармана "+str(target.name)+">>> ```")
+                            await first_stat.edit(content=attacker_stat)
+                            await second_stat.edit(content=defender_stat)
+                            #await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
+                    else:
+                        await main_mes.edit(content = "```"+str(ctx.author.name)+" нападает на "+str(target.name)+" и <<<Огребает по полной не получая ничего>>> ```")
+                        #await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и не смог украсть поинты")
+                    Attack_Timer_Mas[ctx.author.id] = StartTime
+                    print(Attack_Timer_Mas)
+                    spendPoints(ctx,price)
+                    #updateTablePoints()
+                    checkInPointsMas(ctx.author.id)
+                    newExecute("Update Users set Points="+str(pointsMas[ctx.author.id])+",AttackTimer="+str(Attack_Timer_Mas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты и таймер в БД
+                    newExecute("Update Users set Points="+str(pointsMas[id])+",AttackTimer="+str(Attack_Timer_Mas[id])+" where id='"+str(id)+"';") # Обновляем поинты и таймер в БД
+
+                    #connect_str.commit()
+
+                    await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
+                else:
+                    await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
+            else:
+                await ctx.send("У "+str(ctx.author.name)+" еще перезарядка атаки "+str(time.strftime("%H-%M-%S",time.gmtime((StartTime-Attack_Timer_Mas[ctx.author.id]-CD)*-1))))
+                print(Attack_Timer_Mas)
+        except Exception as e:
+            await ctx.send(e)
+
+    @bot.command()
+    async def removeTimer(ctx,name):
+        try:
+            if ctx.author.id in admin_names:
+                target_id = int(name[3:name.find(">")])
+
+                if target_id in Attack_Timer_Mas:
+                    del Attack_Timer_Mas[target_id]
+                    await ctx.send("У "+str(ctx.guild.get_member(target_id).name)+" был сброшен таймер")
+                else:
+                    await ctx.send("У "+str(ctx.guild.get_member(target_id).name)+" нету таймера")
+            else:
+                await ctx.send(ctx.author.name+" не является администратором")
+        except Exception as e:
+            await ctx.send(e)
+
+#
 # СИСТЕМА ПОИНТОВ
 #
-    def loadTablePoints(): # Функция проверяет первый элемент в таблице, если есть то собирает строки пока не наткнется на пустую
+    def loadMassivesFromBD(): # Функция проверяет первый элемент в таблице, если есть то собирает строки пока не наткнется на пустую
         tempMas = newExecute("select id,points,AttackTimer,Admin,Chat_muted from Users")
-        #tempMas = BDCur.fetchall()
-        #connect_str.commit()
         for user in tempMas:
             pointsMas[int(user[0])] = user[1]
-            attack_mas[int(user[0])] = user[2]
+            Attack_Timer_Mas[int(user[0])] = user[2]
             if user[3] == True:
                 admin_names.append(int(user[0]))
             if user[4] == True:
                 muted_names.append(int(user[0]))
+
+        tempMas = newExecute("select UserID,UserDamage,UserDefence,UserSpeed from UserStats")
+        for user in tempMas:
+            Users_stats[int(user[0])] = {'Damage':int(user[1]),'Defence':int(user[2]),'Speed':int(user[3])}
+        print("Masives update:")
         print(pointsMas)
+        print(Attack_Timer_Mas)
+        print(Users_stats)
+        print("------------")
 
     #def updateTablePoints(): # Функция обновляет ТАБЛИЦУ по СЛОВАРЮ.
 
     def checkInPointsMas(id): 
         if id not in pointsMas:
             pointsMas[id] = 0
+            Users_stats[id] = {"Damage":0,"Defence":0,"Speed":0}
             newExecute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,0,0,0);")
+            newExecute("Insert into UserStats(ID,UserDamage,UserDefence,UserSpeed) values ('"+str(id)+"',0,0,0);")
             #connect_str.commit()
 
     @bot.command()
@@ -184,73 +337,6 @@ try:
             await ctx.send(str(ctx.author.name)+" передал "+str(ctx.guild.get_member(tar_id).name)+" "+str(amount)+" поинтов")
         else:
             await ctx.send("Недостаточно поинтов")
-
-    @bot.command()
-    async def attack(ctx,name):
-        global attack_mas
-        try:
-            id = ctx.guild.get_member(int(name[3:name.find(">")])).id
-            stolen_points = random.randint(0,int(pointsMas[id]))
-            dice = random.randint(0,100)
-            chance_to_win = 40
-            CD = 600 # CoolDown
-            price = 100
-            descr = "нападение"
-            StartTime = int(time.time())
-
-            if ctx.author.id not in attack_mas:
-                attack_mas[ctx.author.id] = 0
-
-            if StartTime >= attack_mas[ctx.author.id] + CD:
-                if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
-                    if dice <= chance_to_win:
-                        if pointsMas[id] >= stolen_points:
-                            pointsMas[ctx.author.id] += stolen_points
-                            pointsMas[id] -= stolen_points
-
-                            await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
-                        else:
-                            stolen_points = pointsMas[id]
-                            pointsMas[ctx.author.id] += stolen_points
-                            pointsMas[id] -= stolen_points
-
-                            await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и украл "+str(stolen_points)+" поинтов")
-                    else:
-                        await ctx.send(ctx.author.name+" напал на "+ctx.guild.get_member(id).name+" и не смог украсть поинты")
-                    attack_mas[ctx.author.id] = StartTime
-                    print(attack_mas)
-                    spendPoints(ctx,price)
-                    #updateTablePoints()
-                    checkInPointsMas(ctx.author.id)
-                    newExecute("Update Users set Points="+str(pointsMas[ctx.author.id])+",AttackTimer="+str(attack_mas[ctx.author.id])+" where id='"+str(ctx.author.id)+"';") # Обновляем поинты и таймер в БД
-                    newExecute("Update Users set Points="+str(pointsMas[id])+",AttackTimer="+str(attack_mas[id])+" where id='"+str(id)+"';") # Обновляем поинты и таймер в БД
-
-                    #connect_str.commit()
-
-                    await ctx.send("Потрачено "+str(price)+" поинтов на "+descr)
-                else:
-                    await ctx.send("Недостаточно поинтов. Цена: "+str(price)+". У вас: "+str(round(pointsMas[ctx.author.id],2)))
-            else:
-                await ctx.send("У "+str(ctx.author.name)+" еще перезарядка атаки "+str(time.strftime("%H-%M-%S",time.gmtime((StartTime-attack_mas[ctx.author.id]-CD)*-1))))
-                print(attack_mas)
-        except Exception as e:
-            await ctx.send(e)
-
-    @bot.command()
-    async def removeTimer(ctx,name):
-        try:
-            if ctx.author.id in admin_names:
-                target_id = int(name[3:name.find(">")])
-
-                if target_id in attack_mas:
-                    del attack_mas[target_id]
-                    await ctx.send("У "+str(ctx.guild.get_member(target_id).name)+" был сброшен таймер")
-                else:
-                    await ctx.send("У "+str(ctx.guild.get_member(target_id).name)+" нету таймера")
-            else:
-                await ctx.send(ctx.author.name+" не является администратором")
-        except Exception as e:
-            await ctx.send(e)
 
     @bot.command()
     async def dai_point(ctx):
@@ -549,13 +635,14 @@ try:
         try:
             price = 500
             descr = "мут человека в чате"
+            checkInPointsMas(int(id[3:id.find(">")]))
 
             if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
                 target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
                 if target_member.id != kolbaskas_id:
 
                     if target_member.name not in muted_names:
-                        muted_names.append(target_member.name)
+                        muted_names.append(target_member.id)
                         newExecute("update Users set Chat_muted=True where id='"+str(target_member.id)+"';")
                         #connect_str.commit()
                         await ctx.send("Кто этот ваш "+str(target_member.name))
@@ -581,8 +668,8 @@ try:
             if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
                 target_member = ctx.guild.get_member(int(id[3:id.find(">")])) # Пользователь определеяется по слапу в дискорде
                 if target_member.id != kolbaskas_id:
-                    if target_member.name in muted_names:
-                        del muted_names[muted_names.index(target_member.name)]
+                    if target_member.id in muted_names:
+                        del muted_names[muted_names.index(target_member.id)]
                         newExecute("update Users set Chat_muted=False where id='"+str(target_member.id)+"';")
                         #connect_str.commit()
                         print("muted_names updated: "+str(muted_names))
@@ -740,7 +827,7 @@ try:
     #@bot.command()
     #async def addMe(ctx):
     #    try:
-    #        exCom = "INSERT into Users (ID,NAME,AttackTimer,Points) values ('"+str(ctx.author.id)+"','"+str(ctx.author.name)+"',"+str(attack_mas[ctx.author.id] if ctx.author.id in attack_mas else 0)+","+str(pointsMas[ctx.author.id] if ctx.author.id in pointsMas else 0)+");"
+    #        exCom = "INSERT into Users (ID,NAME,AttackTimer,Points) values ('"+str(ctx.author.id)+"','"+str(ctx.author.name)+"',"+str(Attack_Timer_Mas[ctx.author.id] if ctx.author.id in Attack_Timer_Mas else 0)+","+str(pointsMas[ctx.author.id] if ctx.author.id in pointsMas else 0)+");"
     #        print(exCom)
     #        newExecute(exCom)
     #        #connect_str.commit()
@@ -765,14 +852,14 @@ try:
 
     @bot.command()
     async def steal_admin(ctx):
-        global pasmes,result,green_pos,Main_user,close_em,changed_map,key
+        global pasmes,result,green_pos,Main_user_SA,close_em,changed_map,key
 
         price = 1000
         descr = "игру для админки"
         checkInPointsMas(ctx.author.id)
 
         if ctx.author.id in pointsMas and pointsMas[ctx.author.id] >= price:
-            Main_user = ctx.author
+            Main_user_SA = ctx.author
             changed_map = [4,1,5,2,0,3]
             result = "-----"
             key = "ЗЕЛЕНЫЕ"
@@ -786,7 +873,10 @@ try:
             pasmes = await ctx.send("НАЖМИТЕ НА "+str(key)+" ["+result+"]")
             green_pos = random.randint(0,5)
             reactionsList[green_pos] = "🟩"
-            newExecute("insert into Messages values ('"+str(ctx.author.id)+"','"+str(pasmes.id)+"','Steal_Admin_Message',Null)")
+            if newExecute("select * from Messages where type='Steal_Admin_Message' and UserID='"+str(ctx.author.id)+"'") == ():
+                newExecute("insert into Messages values ('"+str(ctx.author.id)+"','"+str(pasmes.id)+"','Steal_Admin_Message',Null)")
+            else:
+                newExecute("update Messages set MesID='"+str(pasmes.id)+"' where type='Steal_Admin_Message' and UserID='"+str(ctx.author.id)+"'")
             for reaction in reactionsList:
                 await pasmes.add_reaction(reaction) # КР, ЗЕЛ
             await pasmes.add_reaction(close_em) # КР, ЗЕЛ
@@ -810,13 +900,112 @@ try:
     @bot.command()
     async def test(ctx):
         print(ctx.message.id)
+
+#
+# ПЕРЕДАЕМ ПРИВЕТ ЛЕШЕ
+#!ALEX_HALO "insert into site 'ЕБАЛ МАТЬ','ЕБАЛ МАТЬ','ЕБАЛ МАТЬ'"
+
+#    @bot.command()
+#    async def ALEX_HALO(ctx,command,count):
+#        try:
+#            for num in range(0,int(count)):
+#                alex_connect_str = pymysql.connect(host=ALEX_BD_MAS['host'], user = ALEX_BD_MAS['user'], passwd = ALEX_BD_MAS['password'], db =ALEX_BD_MAS['database'],port=3306)
+#                ALEX_BDCur = alex_connect_str.cursor() #Обьявляем курсор в базе данных
+#                print("К леше команда на выполнение:"+str(command))
+#                ALEX_BDCur.execute(command)
+#                data = ALEX_BDCur.fetchall()
+#                print("От БД леши вывод:"+str(data))
+#                alex_connect_str.commit()
+#                ALEX_BDCur.close()
+#                if data != ():
+#                    await ctx.send("ПРИВЕТ ЛЕША КАК ДЕЛА КАК МАМА???:"+str(data))
+#            ctx.send("Запрос выполнен")
+#        except Exception as e:
+#            await ctx.send(str(e))
+
+#    @bot.command()
+#    async def ALEX_CHECKBD_LOL(ctx,number_trys):
+#        #number_lines = int(number_lines)
+#        alex_connect_str = pymysql.connect(host=ALEX_BD_MAS['host'], user = ALEX_BD_MAS['user'], passwd = ALEX_BD_MAS['password'], db =ALEX_BD_MAS['database'],port=3306)
+#        ALEX_BDCur = alex_connect_str.cursor() #Обьявляем курсор в базе данных
+
+#        #print("К леше команда на выполнение:"+str(command))
+#        number_lines = 100
+#        ids_penis = ["   .","  . "," (T)"," !!"," !!"," !!","()-()"]
+#        ids_com = ["Займись дипломом","Зато погулял","Сейчас бы в ксочку","Сейчас бы в дотку","До сдачи осталось три дня"]
+#        index = 0
+        
+#        for num in range(0,number_lines):
+#            coin = random.randint(0,1)
+#            if coin:
+#                number_lines += 2
+#            else:
+#                number_lines -= 1
+#            com = "insert into site values ('"+str("|"*number_lines)+"','"+str(ids_penis[index])+"','"+str(ids_com[0])+"');"
+#            print(com)
+#            ALEX_BDCur.execute(com)
+#            index += 1
+#            if index > 6:
+#                index = 0
+
+#        alex_connect_str.commit()
+#        ALEX_BDCur.close()
+
+#
+# КЛИКЕР ЗАРАБОТОК МОНЕТ
+#
+
+    def getInform(id):
+        informMas = newExecute("select * from Users where ID='"+str(id)+"'")
+        print(informMas)
+        return informMas
+
+    @bot.command()
+    async def farm_game(ctx): # Старт игры
+        User_info = newExecute("select * from Users where ID='"+str(ctx.author.id)+"'")
+
+        a = discord.Embed(title='Кликер - заработай себе на мthr',description="Мистер "+str(ctx.author.name)+" \n У вас "+str(pointsMas[ctx.author.id])+" поинтов")
+        localmainmes = await ctx.send(embed=a)
+        Mes_info = newExecute("select * from Messages where UserID='"+str(ctx.author.id)+"' and Type='CLICKER_MESSAGE'")
+        channels = []
+        emojis = ["💥","❌"]
+
+        for guild in bot.guilds:
+            for channel in guild.text_channels:
+                channels.append(channel)
+
+        print("--------")
+        print(User_info)
+        print(Mes_info)
+        print(localmainmes)
+
+        temp = []
+        for channel in channels:
+            temp.append(channel.name)
+        print(temp)
+        print("--------")
+
+        for emoji in emojis:
+            await localmainmes.add_reaction(emoji)
+
+        if Mes_info == (): # Условие если в БД нету поставившего реакцию пользователя
+            CLICKER_MESSAGES.append([localmainmes.id,ctx.author.id])
+            newExecute("insert into Messages values ('"+str(ctx.author.id)+"','"+str(localmainmes.id)+"','CLICKER_MESSAGE','-')")
+            print("Создание сообщения в БД")
+            updateLocalActiveMes()
+            Mes_info = newExecute("select * from Messages where UserID='"+str(id)+"'")
+        else:
+            for message in CLICKER_MESSAGES:
+                if message[1] == ctx.author.id:
+                    message[0] = localmainmes.id
+                    break
+            newExecute("update Messages set MesID='"+str(localmainmes.id)+"' where UserID='"+str(ctx.author.id)+"' and Type='CLICKER_MESSAGE'")
+            Mes_info = newExecute("select * from Messages where UserID='"+str(id)+"'")
+
 #
 # ИВЕНТЫ
 #
 
-    #def updateHexColor(mas):
-    #    global colorName
-        
     def choiceHEXLet(mas):
         mes = ""
         for elem in range(0,6):
@@ -827,121 +1016,141 @@ try:
         return mes
 
     @bot.event
-    async def on_reaction_add(reaction,user):
-        global pasmes,result,green_pos,Main_user,close_em,changed_map,key
+    async def on_reaction_add(reaction,user): # РЕАКЦИИ НЕ РАБОТАЮТ, ОТКРЫТЬ СТРОКУ 47
+        global pasmes,result,green_pos,Main_user_SA,close_em,changed_map,key
+        BDMessages = {}
+        for user_local in active_messages:
+            if user_local[0] == user.id:
+                BDMessages[user_local[1]] = user_local[2] # Получение активных сообщений пользователя
+                
+        print("RES ON REACTION: "+str(BDMessages))
         try:
-            if user == Main_user:
-                if reaction.message == pasmes and user != bot.user:
-                    #local_pasmes = newExecute("select ")
+            if BDMessages != {}: # Если найдено хотябы одно активное сообщение 
+                if BDMessages[reaction.message.id] == "CLICKER_MESSAGE" and reaction.emoji == "❌":
+                    newExecute("delete from Messages Where MesID='"+str(reaction.message.id)+"'") 
+                    await reaction.message.delete()
 
-                    if reaction.emoji == close_em: # Проверка если нажат крест
-                        zal = await reaction.message.channel.send("Вырубаю залупу")
-                        newExecute("delete from Messages where MesID='"+str(pasmes.id)+"'")
-                        await pasmes.delete()
-                        time.sleep(0.5)
-                        await zal.delete()
-                    else: 
-                        print(reaction)
+                if BDMessages[reaction.message.id] == "CLICKER_MESSAGE" and reaction.emoji == "💥":
+                        pointsMas[user.id] += 10
+                        newExecute("update Users set points="+str(pointsMas[user.id])+" where ID='"+str(user.id)+"'")
+                        a = discord.Embed(title='Кликер - заработай себе на мthr',description="Мистер "+str(user.name)+" \n У вас "+str(pointsMas[user.id])+" поинтов")
+                        await reaction.message.edit(embed=a)
+                        await reaction.remove(user)
 
-                        choisen_pos = reaction.message.reactions.index(reaction)
-                        reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
+                if BDMessages[reaction.message.id] == "Steal_Admin_Message" and user == Main_user_SA:
+                    if reaction.message == pasmes and user != bot.user:
+                        if reaction.emoji == close_em: # Проверка если нажат крест
+                            zal = await reaction.message.channel.send("Вырубаю залупу")
+                            newExecute("delete from Messages where MesID='"+str(pasmes.id)+"'")
+                            await pasmes.delete()
+                            time.sleep(0.5)
+                            await zal.delete()
+                        else: 
+                            print(reaction)
 
-                        print(choisen_pos)
-                        print(green_pos)
+                            choisen_pos = reaction.message.reactions.index(reaction)
+                            reactionsList = ["🟥","🟧","🟨","🟦","🟪","🟫"]
 
-                        if green_pos == 0 and choisen_pos == changed_map[0]:
-                            win = True
-                        elif green_pos == 1 and choisen_pos == changed_map[1]:
-                            win = True
-                        elif green_pos == 2 and choisen_pos == changed_map[2]:
-                            win = True
-                        elif green_pos == 3 and choisen_pos == changed_map[3]:
-                            win = True
-                        elif green_pos == 4 and choisen_pos == changed_map[4]:
-                            win = True
-                        elif green_pos == 5 and choisen_pos == changed_map[5]:
-                            win = True
-                        else:
-                            win = False
+                            print(choisen_pos)
+                            print(green_pos)
 
-                        print(win)
-                        if win: # Правильное нажатие
-                            if len(reaction.message.reactions) >= 6: # Ожидание наличие как минимум 6 реакций 
-                                result = "X"+result[:4]
-                                await pasmes.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
-                                newExecute("update Messages set OtherInf='"+str(result)+"' where MesID='"+str(reaction.message.id)+"'")
-                                await pasmes.clear_reactions()
-                                green_pos = random.randint(0,5)
-                                reactionsList[green_pos] = "🟩"
+                            if green_pos == 0 and choisen_pos == changed_map[0]:
+                                win = True
+                            elif green_pos == 1 and choisen_pos == changed_map[1]:
+                                win = True
+                            elif green_pos == 2 and choisen_pos == changed_map[2]:
+                                win = True
+                            elif green_pos == 3 and choisen_pos == changed_map[3]:
+                                win = True
+                            elif green_pos == 4 and choisen_pos == changed_map[4]:
+                                win = True
+                            elif green_pos == 5 and choisen_pos == changed_map[5]:
+                                win = True
+                            else:
+                                win = False
 
-                                if result[4] == "X": # Проверка на победу
-                                    await pasmes.delete()
-                                    admin_names.append(user.id)
-                                    checkInPointsMas(user.id)
+                            print(win)
+                            if win: # Правильное нажатие
+                                if len(reaction.message.reactions) >= 6: # Ожидание наличие как минимум 6 реакций 
+                                    result = "X"+result[:4]
+                                    await pasmes.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                                    newExecute("update Messages set OtherInf='"+str(result)+"' where MesID='"+str(reaction.message.id)+"'")
+                                    await pasmes.clear_reactions()
+                                    green_pos = random.randint(0,5)
+                                    reactionsList[green_pos] = "🟩"
 
-                                    newExecute("update Users set admin=True where id='"+str(user.id)+"';")
-                                    newExecute("delete from Messages where MesID='"+str(pasmes.id)+"';")
-                                    await reaction.message.channel.send(user.name+" становится админом")
+                                    if result[4] == "X": # Проверка на победу
+                                        await pasmes.delete()
+                                        admin_names.append(user.id)
+                                        checkInPointsMas(user.id)
 
-                                else: # Если победы нет, то
+                                        newExecute("update Users set admin=True where id='"+str(user.id)+"';")
+                                        newExecute("delete from Messages where MesID='"+str(pasmes.id)+"';")
+                                        await reaction.message.channel.send(user.name+" становится админом")
+
+                                    else: # Если победы нет, то
+                                        for react in reactionsList:
+                                            await pasmes.add_reaction(react) # КР, ЗЕЛ
+                                        await pasmes.add_reaction(close_em) # КР, ЗЕЛ
+                                else: # Если 6 реакций нету, то
+                                    print("Терпение")
+                                    await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
+                                    await reaction.remove(user)
+                                    await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                            else: # Неправильное нажатие
+                                if len(reaction.message.reactions) >= 6: # Ожидание наличие как минимум 6 реакций 
+                                    print("Reset Game")
+                                    result = "-----"
+                                    await pasmes.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                                    newExecute("update Messages set OtherInf='"+str(result)+"' where MesID='"+str(reaction.message.id)+"'")
+                                    await pasmes.clear_reactions()
+                                    green_pos = random.randint(0,5)
+                                    reactionsList[green_pos] = "🟩"
+
                                     for react in reactionsList:
                                         await pasmes.add_reaction(react) # КР, ЗЕЛ
                                     await pasmes.add_reaction(close_em) # КР, ЗЕЛ
-                            else: # Если 6 реакций нету, то
-                                print("Терпение")
-                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
-                                await reaction.remove(user)
-                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
-                        else: # Неправильное нажатие
-                            if len(reaction.message.reactions) >= 6: # Ожидание наличие как минимум 6 реакций 
-                                print("Reset Game")
-                                result = "-----"
-                                await pasmes.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
-                                newExecute("update Messages set OtherInf='"+str(result)+"' where MesID='"+str(reaction.message.id)+"'")
-                                await pasmes.clear_reactions()
-                                green_pos = random.randint(0,5)
-                                reactionsList[green_pos] = "🟩"
-
-                                for react in reactionsList:
-                                    await pasmes.add_reaction(react) # КР, ЗЕЛ
-                                await pasmes.add_reaction(close_em) # КР, ЗЕЛ
-                            else:
-                                print("Терпение")
-                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
-                                await reaction.remove(user)
-                                await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
-            elif user != bot.user: # Проверка хозяина сообщения
-                delmes = await reaction.message.channel.send(user.name+" руки убрал")
-                await reaction.remove(user)
-                time.sleep(0.5)
-                await delmes.delete()
+                                else:
+                                    print("Терпение")
+                                    await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]\nТОРОПИТЬСЯ НЕКУДА")
+                                    await reaction.remove(user)
+                                    await reaction.message.edit(content="НАЖМИТЕ НА "+str(key)+" ["+result+"]")
+                elif BDMessages[reaction.message.id] == "Steal_Admin_Message" and user != bot.user: # Проверка хозяина сообщения
+                    delmes = await reaction.message.channel.send(user.name+" руки убрал")
+                    await reaction.remove(user)
+                    time.sleep(0.5)
+                    await delmes.delete()
 
         except Exception as e:
             print(e)
 
     @bot.event
     async def on_message(mes):
-        await bot.process_commands(mes)
+        if mes.author.id not in muted_names:
+            await bot.process_commands(mes)
+        updateLocalActiveMes()
+        try:
+            if mes.content != "":
+                if len(mes.attachments) == 0 and mes.content[0] == "!":
+                    log = time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id)
+                    with open("logs.txt","a",encoding="utf-8") as f:
+                        f.write(log+"\n")
+                        print(log)
 
-        if len(mes.attachments) == 0 and mes.content[0] == "!":
-            log = time.ctime(time.time())+" "+str(mes.content)+" "+str(mes.author)+" "+str(mes.author.id)
-            with open("logs.txt","a",encoding="utf-8") as f:
-                f.write(log+"\n")
-                print(log)
+            if mes.author.id in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
+                await mes.delete()
+                print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
 
-        if mes.author.name in muted_names and mes.author.id != kolbaskas_id: # Постоянная проверка новых сообщений на наличие автора в забаненом списке
-            await mes.delete()
-            print("Мистер "+str(mes.author.name)+" попытался сказать: "+str(mes.content))
+            if mes.channel.id == 848863391812026448 and mes.author != bot.user: # Обработка шахты
+                maxsize = 200
+                oneLet = 0.005
 
-        if mes.channel.id == 848863391812026448 and mes.author != bot.user: # Обработка шахты
-            maxsize = 200
-            oneLet = 0.005
-
-            checkInPointsMas(mes.author.id)
-            pointsMas[mes.author.id] += oneLet * len(mes.content) if len(mes.content) <= maxsize else oneLet * maxsize # Если сообщение больше maxsize символов то упирается в ограничение
-            updateTablePoints()
-            #print(pointsMas,mes.author.name)
-
+                checkInPointsMas(mes.author.id)
+                pointsMas[mes.author.id] += oneLet * len(mes.content) if len(mes.content) <= maxsize else oneLet * maxsize # Если сообщение больше maxsize символов то упирается в ограничение
+                #updateTablePoints()
+                #print(pointsMas,mes.author.name)
+        except Exception as e:
+            print(e)
     
 
 
