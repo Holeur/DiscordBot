@@ -191,7 +191,7 @@ try:
 
             print("taken stats from "+str(target.name)+" "+str(ctx.author.name)+": "+str(target_stats)+" "+str(my_stats))
 
-            maxstolen = int(pointsMas[id]) - target_stats["Defence"]
+            maxstolen = int(int(pointsMas[id]) / target_stats["Defence"])
             if maxstolen < 0:
                 maxstolen = 0
 
@@ -220,7 +220,7 @@ try:
                     first_stat = await ctx.send(attacker_stat)
                     main_mes = await ctx.send("```"+str(ctx.author.name)+" нападает на "+str(target.name)+"```")
                     second_stat = await ctx.send(defender_stat)
-                    await ctx.send("```ШАНС НА ПОБЕДУ: <<<"+str(chance_to_win)+"%>>> ( 50(БАЗА) * "+str(my_stats["Damage"])+"(УРОН НАПАДАЮЩЕГО) - "+str(target_stats["Defence"])+"(БРОНЯ ЗАЩИЩАЮЩЕГОСЯ) )\nЛУЧШЕЕ НАПАДЕНИЕ ДАСТ <<<"+str(maxstolen)+">>> ПОИНТОВ ( "+str(pointsMas[id])+"(ПОИНТЫ ЗАЩИЩАЮЩЕГОСЯ) - "+str(target_stats["Defence"])+"(БРОНЯ ЗАЩИЩАЮЩЕГОСЯ) )```")
+                    await ctx.send("```ШАНС НА ПОБЕДУ: <<<"+str(chance_to_win)+"%>>> ( 50(БАЗА) * "+str(my_stats["Damage"])+"(УРОН НАПАДАЮЩЕГО) / "+str(target_stats["Defence"])+"(БРОНЯ ЗАЩИЩАЮЩЕГОСЯ) )\nЛУЧШЕЕ НАПАДЕНИЕ ДАСТ <<<"+str(maxstolen)+">>> ПОИНТОВ ( "+str(pointsMas[id])+"(ПОИНТЫ ЗАЩИЩАЮЩЕГОСЯ) / "+str(target_stats["Defence"])+"(БРОНЯ ЗАЩИЩАЮЩЕГОСЯ) )```")
 
                     for sec in range(1,4):
                         await main_mes.edit(content = "```"+str(ctx.author.name)+" нападает на "+str(target.name)+" и"+"."*sec+"```")
@@ -311,7 +311,7 @@ try:
             pointsMas[id] = 0
             Users_stats[id] = {"Damage":0,"Defence":0,"Speed":0}
             newExecute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,0,0,0);")
-            newExecute("Insert into UserStats(ID,UserDamage,UserDefence,UserSpeed) values ('"+str(id)+"',0,0,0);")
+            newExecute("Insert into UserStats(ID,UserDamage,UserDefence,UserSpeed) values ('"+str(id)+"',1,1,1);")
             #connect_str.commit()
 
     @bot.command()
