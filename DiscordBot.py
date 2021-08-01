@@ -27,6 +27,12 @@ try:
     #OpenBD = pymysql.connect(connect_str) #Открывам базу данных через прописанные данные
     #BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
 
+    ALEX_BD_MAS = {}
+    ALEX_BD_MAS['host'] = 'alexclown.beget.tech'
+    ALEX_BD_MAS['database'] = 'alexclown_007'
+    ALEX_BD_MAS['user'] = 'alexclown_007'
+    ALEX_BD_MAS['password'] = 'R%Dy%5Ne'
+
     admin_names = []
     muted_names = []
     Users_stats = {}
@@ -43,7 +49,7 @@ try:
     host_os = str(os.getenv("BD_HOST"))
     user_os = os.getenv("BD_USER")
     pw_os = os.getenv("BD_PASSWORD")
-    connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306) 
+    connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="sql6428571",port=3306) 
     
     def updateLocalActiveMes(): # ИСПРАВИТЬ АЛГОРИТМ СБОР АКТИВНЫХ СООБЩЕНИЙ
         global active_messages
@@ -60,7 +66,7 @@ try:
         #print(BDCur.connection)
         if BDCur.connection:
             print("Переоткрытие соединения")
-            connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="mulkovak_test",port=3306)
+            connect_str = pymysql.connect(host=host_os, user = user_os, passwd = pw_os, db ="sql6428571",port=3306)
             BDCur = connect_str.cursor() #Обьявляем курсор в базе данных
         print("Команда на выполнение:"+str(command))
             
@@ -85,6 +91,18 @@ try:
         print(bot.user.id)
         print(bot.guilds)
         print('------')
+#
+# Текст от имени бота
+#
+    @bot.command()
+    async def sendMes(ctx,channelid,message):
+        if ctx.author.id in admin_names:
+            #target_server = bot.get_guild(int(serverid))
+            target_channel = bot.get_channel(int(channelid))
+            await target_channel.send(message)
+        else:
+            await ctx.send(ctx.author.name+" не является администратором")
+
 
 #
 # НАЙТИ ТЕКСТ С СИНОНИМАМИ
@@ -311,7 +329,7 @@ try:
             pointsMas[id] = 0
             Users_stats[id] = {"Damage":0,"Defence":0,"Speed":0}
             newExecute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,0,0,0);")
-            newExecute("Insert into UserStats(ID,UserDamage,UserDefence,UserSpeed) values ('"+str(id)+"',1,1,1);")
+            newExecute("Insert into UserStats(UserID,UserDamage,UserDefence,UserSpeed) values ('"+str(id)+"',1,1,1);")
             #connect_str.commit()
 
     @bot.command()
@@ -892,7 +910,7 @@ try:
                 else:
                     await ctx.send("Команда выполнена")
             else:
-                ctx.send(ctx.author.name+" не является администратором")
+                await ctx.send(ctx.author.name+" не является администратором")
         except Exception as e:
             await ctx.send("SQL команда не прошла: "+str(e))
 
