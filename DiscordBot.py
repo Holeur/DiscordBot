@@ -327,9 +327,9 @@ try:
 
     def checkInPointsMas(id): 
         if id not in pointsMas:
-            pointsMas[id] = 0
+            pointsMas[id] = 500
             Users_stats[id] = {"Damage":0,"Defence":0,"Speed":0}
-            newExecute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,0,0,0);")
+            newExecute("Insert into Users(ID,Name,AttackTimer,Points,Admin,Chat_muted) values ('"+str(id)+"','"+str(bot.get_user(id).name)+"',0,500,0,0);")
             newExecute("Insert into UserStats(UserID,UserDamage,UserDefence,UserSpeed) values ('"+str(id)+"',1,1,1);")
             #connect_str.commit()
 
