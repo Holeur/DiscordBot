@@ -110,6 +110,7 @@ try:
 
     @bot.command()
     async def get_sinonim(ctx,text):
+        checkInPointsMas(ctx.author.id)
         browser = webdriver.Chrome()
         price = 10
         descr = "обработку текста синонимайзером"
@@ -1143,6 +1144,7 @@ try:
 
     @bot.event
     async def on_message(mes):
+        checkInPointsMas(mes.author.id)
         if mes.author.id not in muted_names:
             await bot.process_commands(mes)
         updateLocalActiveMes()
